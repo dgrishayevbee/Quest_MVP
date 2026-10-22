@@ -1,0 +1,33 @@
+# Проверка на каждый push и PR: типы, тесты движка, проверка контента и сборка сайта.
+# Ту же проверку (npm run verify) Vercel запускает перед сборкой, поэтому битый контент не выкатится.
+name: Проверка
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Типы
+        run: npm run typecheck
+      - name: Тесты движка и API
+        run: npm test
+      - name: Контент главы
+        run: npm run check
+      - name: Сборка сайта
+        run: npx next build
+      - name: Отчёт по главе
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: report
+          path: build/report-*.json
+          if-no-files-found: ignore
