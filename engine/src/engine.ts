@@ -32,7 +32,7 @@ export interface Zone {
   id: string; title: string; goal: string; min_level: number;
   boss: { title: string; keys: string[] };
   chains: Chain[]; quests: Quest[];
-  map?: { size: { w: number; h: number }; chest: Record<string, Point>; boss: Point };
+  map?: { size: { w: number; h: number }; chest: Record<string, Point>; boss: Point; regions?: (Point & { name: string })[] };
 }
 export interface PoolItem { id: string; tier: string; title: string; price: number; added?: string; confirmed?: string; placeholder?: boolean }
 export interface ShopItem { id: string; title: string; gold: number; placeholder?: boolean }

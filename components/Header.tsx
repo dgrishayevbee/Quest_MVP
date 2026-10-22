@@ -1,5 +1,5 @@
 'use client';
-// Шапка: бренд, вкладки, XP, золото, слоты, уровень и полоса опыта.
+// Шапка: бренд, вкладки, золото, слоты, уровень с полосой опыта до следующего.
 import { usePathname, useRouter } from 'next/navigation';
 import { xpForLevel } from '@/engine/src/engine';
 import { RULES } from '@/lib/content';
@@ -22,13 +22,15 @@ export function Header() {
           ))}
         </nav>
         <div className="stats">
-          <span className="xpw">XP <b>{fmt(h.xp)}</b></span>
-          <span>Золото <b>{fmt(D.gold)}</b></span>
+          <span className="gold">Золото <b>{fmt(D.gold)}</b></span>
           <span className="slots-mini" aria-label="Слоты"><span>Слоты</span>{Array.from({ length: RULES.slots }, (_, n) => <i key={n} className={D.prog.length > n ? 'on' : ''} />)}</span>
-          <span className="lvl-mini" aria-label="Уровень"><span>{h.level}</span></span>
+          <span className="sep" aria-hidden="true" />
+          <span className="lvlbox">
+            <span className="lvl-mini" aria-hidden="true"><span>{h.level}</span></span>
+            <span className="lv"><span>Уровень <b>{h.level}</b><span className="xpw"> · <b>{fmt(h.xp)}</b> / {fmt(nxt)} XP</span></span><span className="bar"><i style={{ width: pct((h.xp - cur) / (nxt - cur)) }} /></span></span>
+          </span>
         </div>
       </div>
-      <div className="xpline" aria-hidden="true"><i style={{ width: pct((h.xp - cur) / (nxt - cur)) }} /></div>
     </header>
   );
 }
