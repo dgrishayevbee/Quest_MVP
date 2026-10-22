@@ -4,7 +4,7 @@
 
 ```
 npm install            один раз: Next.js и React для сайта
-npm run dev            сайт на http://localhost:3000 (доска, карта, персонаж)
+npm run dev            сайт на http://localhost:3000; без ключей Supabase — события в памяти
 npm run build          сборка сайта для Vercel
 npm run typecheck      проверка типов TypeScript
 npm run check          проверить контент и увидеть прохождение главы по уровням
@@ -14,7 +14,7 @@ npm run build:proto    собрать прототип proto/put-provodnika.html
 
 Node 22+. Движок, тесты и `check` работают без зависимостей.
 
-Сайт: `app/` — маршруты `/board`, `/map`, `/hero`, окна по `?q=<id>`, `?chest=<id>`, `?boss`; `components/` — плашки из `docs/handoff.md`; `lib/` — контент, подписи и хранилище событий (пока `localStorage`, на этапе 2 — Supabase).
+Сайт: `app/` — маршруты `/board`, `/map`, `/hero`, окна по `?q=<id>`, `?chest=<id>`, `?boss`; `components/` — плашки из `docs/handoff.md`; `lib/` — контент и подписи; `lib/server/` — обработчики API поверх движка; `app/api/` — `/api/state`, `/api/events`, `/api/export`, `/api/notes`. База — Supabase: как подключить, в `docs/setup-supabase.md`, схема — `supabase/migrations/`.
 
 - Задание на MVP для Claude Code — `CLAUDE.md`
 - Что и почему — `docs/spec.md`

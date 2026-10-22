@@ -82,17 +82,12 @@ function NextLevel() {
 }
 
 function Notes() {
-  const { D, events, notes, setNotes, reset, toast } = useGame();
-  const [armed, setArmed] = useState(false);
+  const { D, events, notes, setNotes, toast } = useGame();
   const [fallback, setFallback] = useState<string | null>(null);
   const fb = useRef<HTMLTextAreaElement>(null);
   const copy = (text: string, ok: string) => {
     const manual = () => { setFallback(text); setTimeout(() => { fb.current?.focus(); fb.current?.select(); }); toast('Выдели текст и скопируй вручную'); };
     try { navigator.clipboard.writeText(text).then(() => toast(ok)).catch(manual); } catch { manual(); }
-  };
-  const onReset = () => {
-    if (!armed) { setArmed(true); setTimeout(() => setArmed(false), 4000); return; }
-    setArmed(false); reset(); toast('Прогресс сброшен');
   };
   return (
     <section className="card notes" style={{ width: '100%' }}><h3>Заметки по прототипу</h3>
@@ -101,8 +96,6 @@ function Notes() {
       <div className="tools">
         <button className="btn" type="button" onClick={() => copy(statusText(D, notes), 'Статус скопирован. Вставь его в чат с Claude')}>Скопировать статус для Claude</button>
         <button className="btn ghost" type="button" onClick={() => copy(JSON.stringify({ version: RULES.version, exported: new Date().toISOString(), events, notes }), 'Журнал событий скопирован')}>Скопировать журнал событий (JSON)</button>
-        <button className="btn ghost" type="button" onClick={onReset}>Сбросить прогресс</button>
-        <span className="hint">{armed ? 'Нажми ещё раз, чтобы вернуть состояние на 22 октября.' : ''}</span>
       </div>
       <textarea ref={fb} hidden={fallback === null} readOnly aria-label="Статус для копирования" value={fallback ?? ''} />
     </section>

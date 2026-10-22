@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { questValue, xpForLevel, derive, validate, simulate, canApply, swapValue, upgradeEvents, resolveIntent } from '../src/engine.ts';
+import { questValue, xpForLevel, derive, validate, simulate, canApply, swapValue, upgradeEvents, resolveIntent, parseIntent } from '../src/engine.ts';
 import type { GameEvent, Content } from '../src/engine.ts';
 import { loadContent, loadJson, ROOT } from '../node/load.ts';
 
@@ -119,6 +119,15 @@ test('намерение: вещь из сундука и суммы счита�
   assert.equal(resolveIntent({ t: 'shop_bought', item: 'нет' }, s, c).error, 'Нет такого товара');
   assert.equal(resolveIntent({ t: 'quest_taken', q: '1.7' }, s, c).error, 'Квест не доступен');
   assert.deepEqual(resolveIntent({ t: 'quest_submitted', q: '1.8', note: 'x', at: '2000-01-01' } as never, s, c).error, 'Сначала отметь все задачи');
+});
+
+test('разбор намерения: только известные поля', () => {
+  assert.deepEqual(parseIntent({ t: 'chest_swapped', chain: 'voice', gold: 99999, at: '2000-01-01' }), { t: 'chest_swapped', chain: 'voice' });
+  assert.deepEqual(parseIntent({ t: 'quest_submitted', q: '1.6', note: 'x', links: '', extra: 1 }), { t: 'quest_submitted', q: '1.6', note: 'x', links: '' });
+  assert.equal(parseIntent({ t: 'task_set', q: '1.6', task: '1.6-b', v: 'да' }), 'Поле v должно быть true или false');
+  assert.equal(parseIntent({ t: 'quest_taken' }), 'Нет поля q');
+  assert.equal(parseIntent({ t: 'toString' }), 'Неизвестное действие «toString»');
+  assert.equal(parseIntent(null), 'Нужен JSON с полем t');
 });
 
 test('стартовые события из content/seed.json: состояние на 22 октября', () => {

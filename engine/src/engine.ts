@@ -218,6 +218,29 @@ export type Intent =
   | { t: 'chest_swapped'; chain: string }
   | { t: 'shop_bought'; item: string };
 
+// Разбор тела запроса: только известные поля нужного типа. Суммы, вещь и дату клиент прислать не может.
+const INTENT_FIELDS: Record<Intent['t'], [string, 'string' | 'boolean', boolean][]> = {
+  quest_taken: [['q', 'string', true]], quest_dropped: [['q', 'string', true]], quest_reopened: [['q', 'string', true]],
+  task_set: [['q', 'string', true], ['task', 'string', true], ['v', 'boolean', true]],
+  quest_submitted: [['q', 'string', true], ['note', 'string', true], ['links', 'string', false], ['proof', 'string', false]],
+  chest_opened: [['chain', 'string', true]], chest_swapped: [['chain', 'string', true]],
+  chest_received: [['chain', 'string', true], ['photo', 'string', false]],
+  shop_bought: [['item', 'string', true]],
+};
+export function parseIntent(body: unknown): Intent | string {
+  if (!body || typeof body !== 'object') return 'Нужен JSON с полем t';
+  const b = body as Record<string, unknown>, t = b.t as Intent['t'];
+  const fields = Object.hasOwn(INTENT_FIELDS, String(t)) ? INTENT_FIELDS[t] : null;
+  if (!fields) return `Неизвестное действие «${String(b.t)}»`;
+  const out: Record<string, unknown> = { t };
+  for (const [k, type, required] of fields) {
+    if (b[k] === undefined) { if (required) return `Нет поля ${k}`; continue; }
+    if (typeof b[k] !== type) return `Поле ${k} должно быть ${type === 'string' ? 'строкой' : 'true или false'}`;
+    out[k] = b[k];
+  }
+  return out as Intent;
+}
+
 // Превращает намерение в событие и проверяет его через canApply. Вещь из сундука — случайно и равновероятно среди пула тира.
 export function resolveIntent(i: Intent, s: State, c: Content, rnd: () => number = Math.random): { event: GameEvent; error: null } | { event: null; error: string } {
   const fail = (error: string) => ({ event: null, error });
