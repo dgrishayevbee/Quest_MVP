@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { questValue, xpForLevel, derive, validate, simulate, canApply, swapValue } from '../src/engine.ts';
+import { questValue, xpForLevel, derive, validate, simulate, canApply, swapValue, upgradeEvents } from '../src/engine.ts';
 import type { GameEvent, Content } from '../src/engine.ts';
 import { loadContent, ROOT } from '../node/load.ts';
 
@@ -12,7 +12,7 @@ const play = (ids: string[], base: GameEvent[] = []): GameEvent[] => {
   const ev = [...base];
   for (const id of ids) {
     ev.push({ t: 'quest_taken', q: id });
-    Q(id).tasks.forEach((_, i) => ev.push({ t: 'task_set', q: id, i, v: true }));
+    Q(id).tasks.forEach(t => ev.push({ t: 'task_set', q: id, task: t.id, v: true }));
     ev.push({ t: 'quest_submitted', q: id, note: 'тест' });
   }
   return ev;
@@ -37,11 +37,13 @@ test('проверка ловит битый контент', () => {
   const broken: Content = structuredClone(c);
   broken.zone.quests[0].deps = ['НЕТ'];
   broken.zone.quests.find(q => q.id === 'П.1')!.deps = ['1.7'];
-  broken.zone.quests.find(q => q.id === 'П.2')!.tasks = [{ text: 'читать', kind: 'study', hours: 2 }];
+  broken.zone.quests.find(q => q.id === 'П.2')!.tasks = [{ id: 'П.2-a', text: 'читать', kind: 'study', hours: 2 }];
+  broken.zone.quests.find(q => q.id === 'П.3')!.tasks[1].id = 'П.3-a';
   const msgs = validate(broken).filter(i => i.level === 'error').map(i => i.where + ': ' + i.msg).join('\n');
   assert.match(msgs, /зависимость НЕТ не найдена/);
   assert.match(msgs, /цикл зависимостей/);
   assert.match(msgs, /без применения/);
+  assert.match(msgs, /id задачи П.3-a повторяется/);
 });
 
 test('недостижимый допуск попадает в ошибки', () => {
@@ -55,6 +57,35 @@ test('действия: слоты, сдача без задач, золото',
   assert.equal(canApply({ t: 'quest_taken', q: 'П.3' }, s, c), 'Оба слота заняты');
   assert.equal(canApply({ t: 'quest_submitted', q: 'П.1', note: 'x' }, s, c), 'Сначала отметь все задачи');
   assert.equal(canApply({ t: 'shop_bought', item: 's1', gold: 30 }, s, c), 'Не хватает золота');
+  assert.equal(canApply({ t: 'task_set', q: 'П.1', task: 'П.1-a', v: true }, s, c), null);
+  assert.equal(canApply({ t: 'task_set', q: 'П.1', task: 'П.2-a', v: true }, s, c), 'Нет такой задачи');
+});
+
+test('задачи по id: порядок в контенте не важен', () => {
+  const ev: GameEvent[] = [{ t: 'quest_taken', q: 'П.1' }, { t: 'task_set', q: 'П.1', task: 'П.1-b', v: true }];
+  const moved: Content = structuredClone(c);
+  moved.zone.quests.find(q => q.id === 'П.1')!.tasks.reverse();
+  for (const content of [c, moved]) {
+    const s = derive(ev, content);
+    assert.deepEqual(s.qs['П.1'].tasks, { 'П.1-a': false, 'П.1-b': true, 'П.1-c': false });
+    assert.equal(s.tasksDone, 1);
+  }
+});
+
+test('старый журнал с номерами задач читается', () => {
+  const old = [{ t: 'quest_taken', q: '1.6' }, { t: 'task_set', q: '1.6', i: 1, v: true }];
+  const ev = upgradeEvents(old, c);
+  assert.deepEqual(ev[1], { t: 'task_set', q: '1.6', task: '1.6-b', v: true });
+  assert.equal(derive(ev, c).qs['1.6'].tasks['1.6-b'], true);
+});
+
+test('часы у задачи изменились после взятия — предупреждение', () => {
+  const hours = Object.fromEntries(Q('1.6').tasks.map(t => [t.id, t.hours]));
+  assert.ok(!validate(c, [{ q: '1.6', hours }]).some(i => /часы у задачи изменились/.test(i.msg)));
+  const changed: Content = structuredClone(c);
+  changed.zone.quests.find(q => q.id === '1.6')!.tasks[3].hours = 2;
+  const w = validate(changed, [{ q: '1.6', hours }]).filter(i => /часы у задачи изменились/.test(i.msg));
+  assert.deepEqual(w.map(i => [i.level, i.where]), [['warn', '1.6 · 1.6-d']]);
 });
 
 test('сундук: открыть, обменять, вещь возвращается в пул', () => {
@@ -100,7 +131,7 @@ test('симуляция совпадает с прохождением', () => 
 
 test('испытание: с ур. 4 одна теория не поднимает уровень', () => {
   const t: Content = structuredClone(c);
-  for (const id of ['1.3', 'Ф.1']) t.zone.quests.find(q => q.id === id)!.tasks = [{ text: 'читать', kind: 'study', hours: 6 }];
+  for (const id of ['1.3', 'Ф.1']) t.zone.quests.find(q => q.id === id)!.tasks = [{ id: id + '-a', text: 'читать', kind: 'study', hours: 6 }];
   const s = derive(play(['1.1', '1.2', 'П.1', 'П.2', 'П.3', '1.3', 'Ф.1'], []).map(e => e), t);
   assert.ok(s.hero.xp >= 1000, 'опыта хватает на ур. 5');
   assert.equal(s.hero.level, 4);

@@ -19,7 +19,7 @@ export interface Rules {
   swap_share?: number;
   tiers: Record<string, Tier>;
 }
-export interface Task { text: string; kind: KindId; hours: number; optional?: boolean; done?: boolean }
+export interface Task { id: string; text: string; kind: KindId; hours: number; optional?: boolean; done?: boolean }
 export interface Point { x: number; y: number }
 export interface Quest {
   id: string; title: string; brief: string; type: 'main' | 'side' | 'prep';
@@ -43,7 +43,7 @@ export interface Content { rules: Rules; zone: Zone; pool: PoolItem[]; shop: Sho
 export type GameEvent =
   | { t: 'quest_taken'; q: string; at?: string }
   | { t: 'quest_dropped'; q: string; at?: string }
-  | { t: 'task_set'; q: string; i: number; v: boolean; at?: string }
+  | { t: 'task_set'; q: string; task: string; v: boolean; at?: string }
   | { t: 'quest_submitted'; q: string; note: string; links?: string; proof?: string; at?: string }
   | { t: 'quest_reopened'; q: string; at?: string }
   | { t: 'chest_opened'; chain: string; item: string; at?: string }
@@ -95,7 +95,8 @@ export function replayHero(seq: string[], values: Record<string, QuestValue>, ru
 // ---------- состояние из событий
 
 export type QuestStatus = 'done' | 'prog' | 'ready' | 'open' | 'locked';
-export interface QuestState { taken: boolean; done: boolean; tasks: boolean[]; note: string; links: string; at: string | null }
+export interface QuestState { taken: boolean; done: boolean; tasks: Record<string, boolean>; note: string; links: string; at: string | null }
+export const doneCount = (s: QuestState): number => Object.values(s.tasks).filter(Boolean).length;
 export interface ChestRecord { item: string; at?: string; state: 'opened' | 'received' | 'swapped'; photo?: string; gold?: number }
 export interface ChainState { done: number; total: number; complete: boolean; chest: 'locked' | 'ready' | 'empty_pool' | 'opened' | 'received' | 'swapped'; rec: ChestRecord | null }
 export interface State {
@@ -118,7 +119,7 @@ export function derive(events: GameEvent[], c: Content): State {
   const qs: Record<string, QuestState> = {};
   for (const q of zone.quests) {
     values[q.id] = questValue(q, rules);
-    qs[q.id] = { taken: false, done: false, tasks: q.tasks.map(() => false), note: '', links: '', at: null };
+    qs[q.id] = { taken: false, done: false, tasks: Object.fromEntries(q.tasks.map(t => [t.id, false])), note: '', links: '', at: null };
   }
   let seq: string[] = [];
   const chests: Record<string, ChestRecord> = {};
@@ -128,7 +129,7 @@ export function derive(events: GameEvent[], c: Content): State {
   for (const e of events) {
     if (e.t === 'quest_taken') qs[e.q].taken = true;
     else if (e.t === 'quest_dropped') qs[e.q].taken = false;
-    else if (e.t === 'task_set') qs[e.q].tasks[e.i] = !!e.v;
+    else if (e.t === 'task_set') { if (e.task in qs[e.q].tasks) qs[e.q].tasks[e.task] = !!e.v; }
     else if (e.t === 'quest_submitted') {
       const s = qs[e.q];
       s.done = true; s.taken = false; s.note = e.note || ''; s.links = e.links || ''; s.at = e.at || null;
@@ -146,7 +147,7 @@ export function derive(events: GameEvent[], c: Content): State {
   for (const q of zone.quests) {
     const s = qs[q.id];
     if (s.done) { status[q.id] = 'done'; continue; }
-    if (s.taken) { status[q.id] = q.tasks.every((t, i) => t.optional || s.tasks[i]) ? 'ready' : 'prog'; continue; }
+    if (s.taken) { status[q.id] = q.tasks.every(t => t.optional || s.tasks[t.id]) ? 'ready' : 'prog'; continue; }
     const missing = q.deps.filter(d => !qs[d].done);
     const lvlOk = hero.level >= (q.min_level || 1);
     reasons[q.id] = { missing, needLevel: lvlOk ? null : (q.min_level || 1) };
@@ -174,11 +175,22 @@ export function derive(events: GameEvent[], c: Content): State {
     prog: zone.quests.filter(q => status[q.id] === 'prog' || status[q.id] === 'ready').map(q => q.id),
     chains, pool, shop, archive,
     gold: earned + swapGold - spent, earned, spent, swapGold,
-    tasksDone: zone.quests.reduce((a, q) => a + qs[q.id].tasks.filter(Boolean).length, 0),
+    tasksDone: zone.quests.reduce((a, q) => a + doneCount(qs[q.id]), 0),
     battles: seq.reduce((a, id) => a + byId[id].tasks.filter(t => t.kind === 'battle' && !t.optional).length, 0),
     received: Object.values(chests).filter(r => r.state === 'received').length + shop.length,
     bossKeys, bossOpen: bossKeys.every(k => k.ok),
   };
+}
+
+// Старые журналы (прототип до постоянных id) хранят в task_set номер задачи `i`. Переводим номер в id задачи.
+export function upgradeEvents(events: unknown[], c: Content): GameEvent[] {
+  return events.map(raw => {
+    const e = raw as GameEvent & { i?: number };
+    if (e.t !== 'task_set' || e.task !== undefined || typeof e.i !== 'number') return e;
+    const { i, ...rest } = e;
+    const task = c.zone.quests.find(q => q.id === e.q)?.tasks[i]?.id ?? `${e.q}#${i}`;
+    return { ...rest, task };
+  });
 }
 
 // ---------- разрешённые действия (бэкенд проверяет их перед записью события)
@@ -188,7 +200,7 @@ export function canApply(e: GameEvent, s: State, c: Content): string | null {
   switch (e.t) {
     case 'quest_taken': return st !== 'open' ? 'Квест не доступен' : s.prog.length >= c.rules.slots ? 'Оба слота заняты' : null;
     case 'quest_dropped': return st === 'prog' || st === 'ready' ? null : 'Квест не в работе';
-    case 'task_set': return st === 'prog' || st === 'ready' ? null : 'Задачи отмечаются только у квеста в работе';
+    case 'task_set': return st !== 'prog' && st !== 'ready' ? 'Задачи отмечаются только у квеста в работе' : !(e.task in s.qs[e.q].tasks) ? 'Нет такой задачи' : null;
     case 'quest_submitted': return st !== 'ready' ? 'Сначала отметь все задачи' : !e.note?.trim() ? 'Нужна заметка о том, что сделано' : null;
     case 'quest_reopened': return st !== 'done' ? 'Квест не сдан' : s.prog.length >= c.rules.slots ? 'Оба слота заняты' : null;
     case 'chest_opened': return s.chains[e.chain]?.chest === 'ready' ? null : 'Сундук не готов';
@@ -207,7 +219,7 @@ export function simulate(c: Content, order?: string[]): { steps: SimStep[]; stuc
   const add = (id: string) => {
     const q = c.zone.quests.find(x => x.id === id)!;
     events.push({ t: 'quest_taken', q: id });
-    q.tasks.forEach((_, i) => events.push({ t: 'task_set', q: id, i, v: true }));
+    q.tasks.forEach(t => events.push({ t: 'task_set', q: id, task: t.id, v: true }));
     events.push({ t: 'quest_submitted', q: id, note: 'симуляция' });
   };
   const steps: SimStep[] = [];
@@ -229,7 +241,9 @@ export function simulate(c: Content, order?: string[]): { steps: SimStep[]; stuc
 // ---------- проверка контента
 
 export interface Issue { level: 'error' | 'warn'; where: string; msg: string }
-export function validate(c: Content): Issue[] {
+// Часы задач квеста на момент взятия. Заготовка: на этапе 2 снимки придут из базы, пока их никто не передаёт.
+export interface TakenSnapshot { q: string; hours: Record<string, number> }
+export function validate(c: Content, taken: TakenSnapshot[] = []): Issue[] {
   const out: Issue[] = [];
   const err = (where: string, msg: string) => out.push({ level: 'error', where, msg });
   const warn = (where: string, msg: string) => out.push({ level: 'warn', where, msg });
@@ -239,6 +253,7 @@ export function validate(c: Content): Issue[] {
     if (ids.has(q.id)) err(q.id, 'ID повторяется');
     ids.add(q.id);
   }
+  const taskIds = new Set<string>();
   for (const q of zone.quests) {
     if (!q.title?.trim()) err(q.id, 'нет названия');
     if (!q.brief?.trim()) err(q.id, 'нет короткого «что сделать» (brief)');
@@ -246,6 +261,9 @@ export function validate(c: Content): Issue[] {
     if (!q.tasks.length) err(q.id, 'нет задач');
     for (const d of q.deps) if (!ids.has(d)) err(q.id, `зависимость ${d} не найдена`);
     q.tasks.forEach((t, i) => {
+      if (!t.id?.trim()) err(`${q.id} · задача ${i + 1}`, 'нет id задачи');
+      else if (taskIds.has(t.id)) err(`${q.id} · задача ${i + 1}`, `id задачи ${t.id} повторяется`);
+      else taskIds.add(t.id);
       if (!rules.kinds[t.kind]) err(`${q.id} · задача ${i + 1}`, `неизвестный вид «${t.kind}»`);
       if (!(t.hours > 0)) err(`${q.id} · задача ${i + 1}`, 'часы должны быть больше нуля');
       if (t.hours > 6) warn(`${q.id} · задача ${i + 1}`, `${t.hours} ч на одну задачу — лучше разбить`);
@@ -275,6 +293,11 @@ export function validate(c: Content): Issue[] {
     }
   }
   for (const k of zone.boss.keys) if (!ids.has(k)) err('босс', `ключ ${k} не найден`);
+  // часы фиксируются до взятия: сравниваем со снимком на момент взятия
+  for (const snap of taken) {
+    const q = byId[snap.q]; if (!q) continue;
+    for (const t of q.tasks) if (t.id in snap.hours && snap.hours[t.id] !== t.hours) warn(`${q.id} · ${t.id}`, `часы у задачи изменились после взятия: ${snap.hours[t.id]} → ${t.hours}`);
+  }
   // достижимость: всё ли проходится с допусками и испытаниями
   if (!out.some(i => i.level === 'error')) {
     const sim = simulate(c);
