@@ -4,8 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run verify && next build",
     "start": "next start",
+    "verify": "npm test && npm run check",
     "typecheck": "tsc --noEmit",
     "check": "node --experimental-strip-types --no-warnings engine/cli/check.ts",
     "test": "node --experimental-strip-types --no-warnings --test engine/test/*.test.ts lib/server/*.test.ts",
