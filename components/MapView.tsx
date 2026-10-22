@@ -1,5 +1,6 @@
 'use client';
 // Карта зоны: метки квестов по quest.map, путь цепочки к сундуку, страж у перевала, туман следующей главы.
+import { useEffect, useRef, useState } from 'react';
 import { doneCount, type Point, type Quest } from '@/engine/src/engine';
 import { CHAIN_OF, QBY, QUESTS, RULES, ZONE, ZONE2 } from '@/lib/content';
 import { TYPE, deadlineText, tierOf } from '@/lib/ui';
@@ -11,6 +12,21 @@ const curve = (a: Point, b: Point) => {
   return `M${a.x} ${a.y} Q${mx - dy * 0.15} ${my + dx * 0.15} ${b.x} ${b.y}`;
 };
 const done = (n: number) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F4DDC8" strokeWidth={3.2} aria-hidden="true" key={n}><path d="M5 12l5 5 9-10" /></svg>;
+
+// Карта нарисована в координатах контента. На ПК блок сжимает её под ширину колонки, а не обрезает;
+// на узком экране (сжатие сильнее 0.6) карта остаётся в натуральную величину и прокручивается вбок.
+function useFit(w: number) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [k, setK] = useState(1);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => { const r = el.clientWidth / w; setK(r >= 0.6 ? Math.min(1, r) : 1); });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [w]);
+  return [ref, k] as const;
+}
 
 function Decor() {
   return (
@@ -46,6 +62,7 @@ function Marker({ q }: { q: Quest }) {
 export function MapView() {
   const { D, open } = useGame();
   const M = ZONE.map!, W = M.size.w, H = M.size.h;
+  const [box, k] = useFit(W);
   const ch = ZONE.chains[0], cs = D.chains[ch.id], CP = M.chest[ch.id], B = M.boss;
   const pos = (id: string) => QBY[id]?.map;
   const paths: React.ReactNode[] = [];
@@ -68,7 +85,7 @@ export function MapView() {
       <Banners />
       <div className="main">
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '6px 16px', marginBottom: 12 }}><h2 style={{ fontSize: 26 }}>Зона I · {ZONE.title}</h2><span className="hint">Красный путь ведёт к сундуку. Нажми на метку, чтобы открыть квест.</span></div>
-        <div className="map-box"><div className="map" style={{ width: W, height: H }}>
+        <div className="map-box" ref={box} style={{ height: H * k }}><div className="map map-fit" style={{ width: W, height: H, transform: k < 1 ? `scale(${k})` : undefined }}>
           <div className="glow" style={{ left: 560, top: -60, width: 420, height: 420, background: 'radial-gradient(circle,rgba(74,60,42,.55),rgba(11,8,6,0) 70%)' }} />
           <div className="glow" style={{ left: 640, top: 330, width: 380, height: 380, background: 'radial-gradient(circle,rgba(64,52,36,.5),rgba(11,8,6,0) 70%)' }} />
           <div className="isle" />

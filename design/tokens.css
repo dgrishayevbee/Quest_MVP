@@ -1,4 +1,4 @@
-/* Токены «Путь проводника». Источник: proto/template.html. Один тёмный мир, без светлой темы. */
+/* Токены «Путь проводника». Источник: proto/template.html, затем «освежённый» стиль. Один тёмный мир, без светлой темы. */
 :root{
   --night:#100C08;
   --panel:#1A140E;
@@ -6,7 +6,7 @@
   --line:#3E3122;
   --line2:#2C2318;
   --ink:#F1E6CC;
-  --muted:#A99272;
+  --muted:#B8A07C;
   --tan:#C9B48A;
   --gold:#D2A54A;
   --gold-hi:#F0CB73;
@@ -35,5 +35,6 @@
   --route:#9A2E1E;
   --f-display:"Philosopher",Georgia,serif;
   --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  /* Числа — тем же шрифтом, что текст, с ровными цифрами (.mono). Два шрифта на весь сайт. */
+  --f-mono:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
 }

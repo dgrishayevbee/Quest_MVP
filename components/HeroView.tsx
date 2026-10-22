@@ -23,7 +23,6 @@ function HeroPanel() {
   if (got) trophies.push(<div className="hslot" key="chest"><span className="ic gold"><RewardIcon /></span><div><small>Сундук «{ch.title}»</small><b>{C.pool.find(p => p.id === cs.rec!.item)?.title}</b><em>{tierOf(ch).title.toLowerCase()}</em></div></div>);
   D.shop.forEach((s, n) => trophies.push(<div className="hslot" key={'shop' + n}><span className="ic"><RewardIcon /></span><div><small>Казна</small><b>{C.shop.find(x => x.id === s.item)?.title}</b><em>{s.gold} золота</em></div></div>));
   if (!got) trophies.unshift(<div className="hslot" key="chest-slot"><span className="ic empty" style={{ color: '#4E4232' }}><RewardIcon /></span><div><small>Слот сундука «{ch.title}»</small><b style={faint}>{cs.chest === 'locked' ? `осталось ${cs.total - cs.done} из ${cs.total} квестов` : 'сундук ждёт на карте'}</b></div></div>);
-  for (let n = trophies.length; n < 4; n++) trophies.push(<div className="hslot" key={'empty' + n}><span className="ic empty" /><div><small>Трофей</small><b style={faint}>пустой слот</b></div></div>);
   return (
     <div className="heropanel">
       <div className="hcol"><span className="eyebrow">Итоги</span>
@@ -39,7 +38,7 @@ function HeroPanel() {
         <div className="hbar"><div className="bar"><i style={{ width: pct((h.xp - cur) / (nxt - cur)) }} /></div><span>{fmt(h.xp)} / {fmt(nxt)} XP до ур. {h.level + 1}</span></div>
         {h.blocked && <span className="trialtag">ждёт испытания</span>}
       </div>
-      <div className="hcol"><span className="eyebrow">Трофеи</span>{trophies.slice(0, 4)}</div>
+      <div className="hcol"><span className="eyebrow">Трофеи</span>{trophies.slice(0, 4)}{trophies.length < 4 && <p className="hint">Сюда лягут вещи из сундуков и покупки в казне.</p>}</div>
     </div>
   );
 }
@@ -59,8 +58,8 @@ function Chronicle() {
   const { D } = useGame();
   const rows = D.archive.slice().reverse().filter(a => D.qs[a.q].done && D.qs[a.q].at === (a.at || null));
   return (
-    <section className="chron"><span className="eyebrow" style={{ color: '#7A5A2A' }}>Летопись · что сдано</span>
-      {rows.length ? rows.map((a, n) => <div className="e" key={n}><b>{QBY[a.q].title} · +{D.values[a.q].xp} XP</b><p>{a.note}</p>{a.links && <span style={{ fontSize: 12, color: 'var(--pmuted)', overflowWrap: 'anywhere' }}>{a.links}</span>}</div>) : <p style={{ margin: 0 }}>Пока пусто.</p>}
+    <section className="chron"><h3>Летопись</h3><span className="hint" style={{ marginTop: -6 }}>Что сдано и с какой заметкой</span>
+      {rows.length ? rows.map((a, n) => <div className="e" key={n}><b>{QBY[a.q].title} · +{D.values[a.q].xp} XP</b><p>{a.note}</p>{a.links && <span style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>{a.links}</span>}</div>) : <p style={{ margin: 0 }}>Пока пусто.</p>}
     </section>
   );
 }
