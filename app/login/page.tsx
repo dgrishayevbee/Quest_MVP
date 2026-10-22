@@ -22,7 +22,7 @@ export default function Login() {
         <span className="pin" aria-hidden="true" />
         <span className="kicker">Путь проводника</span>
         <h2>Вход в гильдию</h2>
-        {!CONFIGURED ? <p className="brief">Сайт не подключён к базе: задай NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_ANON_KEY (см. .env.example) и пересобери.</p>
+        {!CONFIGURED ? <p className="brief">Сайт не подключён к базе: задай NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (см. .env.example) и пересобери.</p>
           : state === 'sent'
           ? <p className="brief">Ссылка отправлена на {email.trim()}. Открой письмо на этом устройстве.</p>
           : <>

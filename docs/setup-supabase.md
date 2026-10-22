@@ -19,7 +19,7 @@
 - Redirect URLs — добавить `http://localhost:3000/auth/callback` и `https://<сайт>.vercel.app/auth/callback`.
 
 ## 4. Ключи
-**Connect** (или **Project Settings → API Keys**): Project URL и anon / publishable key. Это публичный ключ, его видит браузер; доступ к данным закрывают политики RLS. Ключ `service_role` / secret сайту не нужен — никуда его не вставляй.
+**Connect → Framework → Next.js**, вкладка `.env.local`: `NEXT_PUBLIC_SUPABASE_URL` и `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (старое имя `NEXT_PUBLIC_SUPABASE_ANON_KEY` тоже подходит). Это публичный ключ, его видит браузер; доступ к данным закрывают политики RLS. Ключ `service_role` / secret сайту не нужен — никуда его не вставляй.
 
 Локально: скопировать `.env.example` в `.env.local` и заполнить. На Vercel — те же три переменные в **Settings → Environment Variables**, до сборки (переменные `NEXT_PUBLIC_*` вшиваются при сборке).
 
