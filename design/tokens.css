@@ -1,0 +1,39 @@
+/* Токены «Путь проводника». Источник: proto/template.html. Один тёмный мир, без светлой темы. */
+:root{
+  --night:#100C08;
+  --panel:#1A140E;
+  --panel2:#221A12;
+  --line:#3E3122;
+  --line2:#2C2318;
+  --ink:#F1E6CC;
+  --muted:#A99272;
+  --tan:#C9B48A;
+  --gold:#D2A54A;
+  --gold-hi:#F0CB73;
+  --gold-ink:#1A140E;
+  --seal:#9C3122;
+  --seal-dark:#5E1C14;
+  --seal-ink:#F0B9A8;
+  --boss:#B4523E;
+  --moss:#6F9150;
+  --moss-ink:#B9D6A4;
+  --parch:#F1E2C0;
+  --parch2:#E6D1A4;
+  --parch-dim:#CDBB98;
+  --pink:#2A1E13;
+  --pmuted:#5A4632;
+  --pfaint:#8C7A63;
+  --wood:#6E4C2F;
+  --wood2:#5C3E25;
+  --wood-frame:#3A2614;
+  --wood-plank:#4A321E;
+  --rust:#7A3E1D;
+  --rust-dark:#4A220E;
+  --island:#E6D3A9;
+  --map-ink:#3B2A1A;
+  --pencil:#9C8F78;
+  --route:#9A2E1E;
+  --f-display:"Philosopher",Georgia,serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}

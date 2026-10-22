@@ -1,0 +1,618 @@
+<title>Журнал квестов Consa</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Philosopher:ital,wght@0,400;0,700;1,400;1,700&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: шапка гильдии → вкладки Доска (деревянная доска + журнал) / Карта (пергаментный остров + журнал зоны) / Персонаж (портрет и слоты) → окно квеста-пергамент поверх. */
+:root{
+  --night:#100C08; --panel:#1A140E; --panel2:#221A12; --line:#3E3122; --line2:#2C2318;
+  --ink:#F1E6CC; --muted:#A99272; --tan:#C9B48A;
+  --gold:#D2A54A; --gold-hi:#F0CB73; --gold-ink:#1A140E;
+  --seal:#9C3122; --seal-dark:#5E1C14; --seal-ink:#F0B9A8; --boss:#B4523E;
+  --moss:#6F9150; --moss-ink:#B9D6A4;
+  --parch:#F1E2C0; --parch2:#E6D1A4; --parch-dim:#CDBB98; --pink:#2A1E13; --pmuted:#5A4632; --pfaint:#8C7A63;
+  --wood:#6E4C2F; --wood2:#5C3E25; --wood-frame:#3A2614; --wood-plank:#4A321E; --rust:#7A3E1D; --rust-dark:#4A220E;
+  --island:#E6D3A9; --map-ink:#3B2A1A; --pencil:#9C8F78; --route:#9A2E1E;
+  --f-display:"Philosopher",Georgia,serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:var(--night)}
+body{background:var(--night);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;padding-block:0 48px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--panel)}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold-hi);outline-offset:2px}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;margin:0;text-wrap:balance}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.gutter{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:var(--panel);border-bottom:1px solid var(--line)}
+.top-in{max-width:1240px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 22px;padding-block:10px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand .mark{width:30px;height:30px;transform:rotate(45deg);border:2px solid var(--gold);background:var(--panel2);display:grid;place-items:center;margin:4px}
+.brand .mark span{transform:rotate(-45deg);font-family:var(--f-display);font-weight:700;color:var(--gold-hi)}
+.brand b{font-family:var(--f-display);font-size:18px;line-height:1.1;display:block}
+.nav{display:flex;gap:4px;flex-wrap:wrap}
+.nav button{background:none;border:1px solid transparent;border-radius:8px;padding:9px 14px;color:var(--tan);cursor:pointer;font-size:14px}
+.nav button[aria-selected="true"]{background:#2A2117;color:var(--gold-hi);border-color:#6B5530;font-weight:600}
+.stats{display:flex;align-items:center;gap:16px;font-size:12.5px;color:var(--muted)}
+.stats b{font-family:var(--f-mono);color:var(--ink)}
+.slots-mini{display:flex;align-items:center;gap:6px}
+.slots-mini i{width:11px;height:11px;transform:rotate(45deg);border:1.5px solid #6B5530;display:inline-block}
+.slots-mini i.on{background:var(--gold);border-color:var(--gold)}
+.lvl-mini{width:28px;height:28px;transform:rotate(45deg);background:var(--gold);display:grid;place-items:center;margin:3px}
+.lvl-mini span{transform:rotate(-45deg);font-family:var(--f-mono);font-weight:700;font-size:12px;color:var(--gold-ink)}
+.xpline{height:3px;background:var(--line2)}
+.xpline i{display:block;height:3px;background:var(--gold);transition:width .5s ease}
+
+main{max-width:1240px;margin:0 auto;padding-top:20px}
+.view{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start}
+.view>.main{flex:999 1 640px;min-width:0}
+.view>.side{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.banner{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 16px;border-radius:10px;border:1px solid var(--gold);background:color-mix(in srgb,var(--gold) 12%,var(--panel));margin-bottom:14px;width:100%}
+.banner.alarm{border-color:var(--boss);background:color-mix(in srgb,var(--boss) 14%,var(--panel))}
+.banner p{margin:0;font-size:14px}
+.btn{font-weight:700;font-size:14px;padding:10px 16px;border-radius:6px;border:1px solid var(--gold-hi);background:var(--gold);color:var(--gold-ink);cursor:pointer;min-height:42px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.rust{background:var(--rust);border-color:var(--rust-dark);color:#FFF1DA;box-shadow:inset 0 1px 0 #9E5A32}
+.btn.moss{background:#4F6B38;border-color:#8DB074;color:#F1F6EA}
+.btn.ghost{background:none;border-color:var(--line);color:var(--ink)}
+.btn.pghost{background:none;border:1px dashed #B8A27C;color:var(--pfaint)}
+.btn.small{padding:7px 12px;min-height:36px;font-size:13px}
+
+/* board */
+.board-head{position:relative;z-index:2;margin:0 auto -20px;width:max-content;max-width:100%;padding:10px 32px;background:var(--wood-plank);border:2px solid #2A1A0E;border-radius:6px;box-shadow:inset 0 1px 0 #6E4C2E,0 6px 14px rgba(0,0,0,.55);text-align:center}
+.board-head b{font-family:var(--f-display);font-size:23px;color:#F0D9A6;letter-spacing:.04em;display:block}
+.board-head span{font-size:11.5px;color:#C9A97A}
+.board{background:repeating-linear-gradient(90deg,var(--wood) 0 116px,var(--wood2) 116px 119px);border:12px solid var(--wood-frame);border-radius:8px;box-shadow:inset 0 0 0 2px #6E4C2E,inset 0 0 50px rgba(0,0,0,.5);padding:44px 22px 26px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:30px 22px;align-items:stretch}
+.note{position:relative;background:var(--parch);color:var(--pink);border-radius:2px;box-shadow:inset 0 0 22px rgba(120,80,30,.35),0 10px 18px rgba(20,10,4,.5);padding:26px 16px 16px;display:flex;flex-direction:column;gap:9px;text-align:left;border:0;min-width:0}
+.note:nth-child(3n+1){transform:rotate(-1deg)}.note:nth-child(3n+2){transform:rotate(.9deg)}.note:nth-child(3n){transform:rotate(-.5deg)}
+.note .pin{position:absolute;left:50%;top:-9px;width:18px;height:18px;margin-left:-9px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#F3D27A,#A87A22 70%);box-shadow:0 2px 3px rgba(0,0,0,.5)}
+.ribbon{position:absolute;left:-6px;top:14px;padding:3px 10px 3px 12px;font-family:var(--f-mono);font-size:10px;font-weight:700;letter-spacing:.12em;box-shadow:0 2px 3px rgba(0,0,0,.35)}
+.r-main{background:#B8862A;color:var(--pink)}.r-side{background:#5E7F4A;color:#F1F6EA}.r-prep{background:#3F6A96;color:#EAF2FA}
+.note h3{font-size:20px;line-height:1.12;color:var(--pink);margin-top:4px}
+.note .brief{font-family:var(--f-display);font-style:italic;font-size:14px;line-height:1.4;color:var(--pmuted)}
+.flag{align-self:flex-start;padding:3px 12px 3px 10px;font-size:11.5px;font-weight:600;clip-path:polygon(0 0,100% 0,93% 50%,100% 100%,0 100%)}
+.flag.deadline{background:var(--seal);color:#FBE6DC}.flag.chain{background:#7A2A1D;color:#FBE6DC}
+.note .foot{display:flex;align-items:center;gap:10px;border-top:1px dashed #C2A877;padding-top:10px;margin-top:auto;font-family:var(--f-mono);font-size:13px;font-weight:700}
+.note .foot .x{color:#3A6229}.note .foot .g{color:#8A5A08}
+.note .acts{display:flex;gap:8px}
+.note .acts .btn{flex:1}
+.note.sealed{background:var(--parch-dim);box-shadow:inset 0 0 26px rgba(70,45,20,.5),0 6px 12px rgba(20,10,4,.45);align-items:center;justify-content:center;text-align:center;cursor:pointer;min-height:200px}
+.note.sealed .pin{background:radial-gradient(circle at 35% 35%,#CFC3A8,#6E6250 70%)}
+.note.sealed .q{font-family:var(--f-display);font-weight:700;font-size:20px;color:#6E5A3C;line-height:1.15}
+.waxseal{width:58px;height:58px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#B23A28,#6E1A10 75%);box-shadow:0 3px 6px rgba(0,0,0,.4);display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:20px;color:var(--seal-ink)}
+.waxseal.lvl{background:radial-gradient(circle at 40% 35%,#5A7FA6,#22384F 75%);color:#DCE8F4;font-size:15px}
+.note.sealed .cond{font-size:12.5px;color:#4A3A26}
+.note.wanted{background:#E8CE98;border:4px double #6E2A16;align-items:center;text-align:center;cursor:pointer}
+.note.wanted .w{font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.1em;color:#6E2A16}
+.keys{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.keys span{width:34px;height:34px;border-radius:50%;border:2px dashed #6E2A16;display:grid;place-items:center;font-family:var(--f-mono);font-size:10px;color:#6E2A16}
+.keys span.ok{border-style:solid;background:#6E2A16;color:#F7E7CF}
+
+/* journal (wood frame) */
+.journal{background:var(--wood-plank);border-radius:12px;box-shadow:inset 0 0 0 6px var(--wood-plank),inset 0 0 0 7px #8A6A44,0 10px 24px rgba(0,0,0,.5);padding:22px 20px;display:flex;flex-direction:column;gap:14px;color:#F0D9A6}
+.journal .jh{display:flex;justify-content:space-between;align-items:baseline}
+.journal .jh b{font-family:var(--f-display);font-size:22px}
+.jslot{background:var(--parch);color:var(--pink);border-radius:4px;box-shadow:inset 0 0 18px rgba(120,80,30,.3);padding:14px 14px 12px;display:flex;flex-direction:column;gap:9px}
+.jslot .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.jslot .row span:first-child{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;color:#8A5A08}
+.ticks{display:flex;gap:3px}.ticks i{width:14px;height:6px;background:#D9C7A0}.ticks i.on{background:#8A3B22}
+.jslot h3{font-size:18px;color:var(--pink);cursor:pointer;text-align:left;background:none;border:0;padding:0}
+.ptasks{display:flex;flex-direction:column;gap:6px;font-size:13.5px;margin:0;padding:0;list-style:none}
+.ptasks label{display:flex;gap:9px;align-items:flex-start;cursor:pointer;padding:3px 6px;margin:0 -6px;border-radius:3px}
+.ptasks label.next{font-weight:600;background:var(--parch2)}
+.ptasks label.done{color:var(--pfaint);text-decoration:line-through}
+.ptasks label.off{cursor:default}
+.ptasks input{margin:3px 0 0;accent-color:var(--rust);width:16px;height:16px;flex:none}
+.jslot .win{font-size:12.5px;color:#6E5532;border-top:1px dashed #C2A877;padding-top:8px}
+.jempty{border:2px dashed #8A6A44;border-radius:4px;padding:20px 14px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.jempty b{font-family:var(--f-display);font-size:16px}
+.jempty span{font-size:12px;color:#C9A97A}
+.side-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.side-card h3{font-size:19px}
+
+/* map */
+.map-box{overflow-x:auto;border-radius:12px}
+.map{position:relative;width:940px;height:680px;border-radius:12px;background:#0B0806;overflow:hidden;border:1px solid #3A2E1F}
+.map .isle{position:absolute;left:20px;top:28px;width:700px;height:630px;border-radius:44% 56% 48% 52% / 42% 46% 54% 58%;background:var(--island);box-shadow:inset 0 0 70px 18px rgba(122,84,38,.55),0 0 0 5px var(--night),0 0 60px 10px rgba(230,211,169,.08)}
+.map .glow{position:absolute;border-radius:50%;pointer-events:none}
+.map svg{position:absolute;left:0;top:0}
+.mk{position:absolute;z-index:1;transform:translate(-50%,-50%);border:0;background:none;padding:0;cursor:pointer;display:grid;place-items:center}
+.mk .shield{width:40px;height:46px;clip-path:polygon(50% 0,100% 18%,100% 62%,50% 100%,0 62%,0 18%);display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:24px}
+.mk.open .shield{background:var(--gold);color:var(--gold-ink)}
+.mk.prog .shield{background:#6E675C;color:#EDE6D8}
+.mk.ready .shield{background:var(--gold-hi);color:var(--gold-ink)}
+.mk.locked .shield{width:30px;height:35px;font-size:17px;background:#BBA67D;color:#6E5A3C}
+.mk.done .shield{width:34px;height:34px;clip-path:none;border-radius:50%;background:var(--seal);border:3px solid var(--seal-dark);box-shadow:0 2px 0 #3E120C}
+.mk.halo::before{content:"";position:absolute;width:76px;height:76px;border-radius:50%;background:radial-gradient(circle,rgba(231,180,62,.55),rgba(231,180,62,0) 70%);z-index:-1}
+.mlabel{position:absolute;transform:translateX(-50%);width:150px;text-align:center;font-family:var(--f-display);font-style:italic;font-size:13.5px;line-height:1.2;color:#3B2C1A;pointer-events:none}
+.mlabel.locked{color:#8E806A}
+.mlabel small{display:block;font-family:var(--f-body);font-style:normal;font-size:11px;color:var(--route);font-weight:700}
+.chestmk{position:absolute;transform:translate(-50%,-50%);border:0;background:none;cursor:pointer;padding:0}
+.chestmk .box{width:46px;height:36px;border-radius:8px 8px 4px 4px;background:linear-gradient(#C98E2E,#8A5A12);border:2.5px solid #4A2E0A;position:relative;box-shadow:0 3px 0 #3A2408}
+.chestmk .box::before{content:"";position:absolute;left:-2px;right:-2px;top:11px;height:3px;background:#4A2E0A}
+.chestmk .box::after{content:"";position:absolute;left:50%;top:9px;width:9px;height:10px;margin-left:-4.5px;background:#F0CB73;border:1.5px solid #4A2E0A;border-radius:2px}
+.chestmk.ready::before{content:"";position:absolute;left:50%;top:50%;width:90px;height:90px;margin:-45px 0 0 -45px;border-radius:50%;background:radial-gradient(circle,rgba(240,203,115,.7),rgba(240,203,115,0) 70%)}
+.bossmk{position:absolute;width:46px;height:46px;transform:translate(-50%,-50%) rotate(45deg);background:#3A1410;border:2px solid var(--boss);box-shadow:0 0 24px 6px rgba(180,82,62,.35);cursor:pointer;padding:0}
+.bossmk.open{background:#2E3A22;border-color:var(--moss);box-shadow:0 0 24px 6px rgba(111,145,80,.35)}
+.bossmk svg{position:static;transform:rotate(-45deg)}
+.bosstext{position:absolute;width:160px;display:flex;flex-direction:column;gap:2px;pointer-events:none}
+.fogzone{position:absolute;left:740px;top:300px;width:180px;height:220px;border-radius:46% 54% 50% 50%;border:1.5px dashed #5A4A33;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:16px;gap:6px}
+.fogzone b{font-family:var(--f-display);font-style:italic;font-size:18px;color:#8E7A58}
+.fogzone span{font-size:11.5px;color:#7E6A4A}
+.zlist{display:flex;flex-direction:column;gap:6px}
+.zrow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;border:1px solid var(--line);background:none;cursor:pointer;text-align:left;width:100%}
+.zrow.prog{background:var(--panel2);border-color:transparent}
+.zrow.open{border-color:#6B5530}
+.zrow .sh{width:14px;height:16px;flex:none;clip-path:polygon(50% 0,100% 18%,100% 62%,50% 100%,0 62%,0 18%);background:var(--gold)}
+.zrow.prog .sh{background:#6E675C}
+.zrow span.t{flex:1;font-size:13.5px;min-width:0}
+.zrow span.m{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:13px}
+.kv span:last-child{font-family:var(--f-mono)}
+
+/* hero */
+.heropanel{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:inset 0 0 0 4px var(--panel),inset 0 0 0 5px var(--line2);padding:22px;display:flex;flex-wrap:wrap;gap:22px;align-items:center;width:100%}
+.hcol{flex:1 1 250px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.hslot{display:flex;gap:12px;align-items:center;min-width:0}
+.hslot .ic{width:60px;height:60px;flex:none;border-radius:8px;background:var(--panel2);border:2px solid #A9A193;box-shadow:inset 0 0 12px rgba(169,161,147,.3);display:grid;place-items:center;font-family:var(--f-mono);font-weight:700;font-size:20px;color:var(--ink)}
+.hslot .ic.gold{border-color:var(--gold);box-shadow:inset 0 0 12px rgba(210,165,74,.35);color:var(--gold-hi)}
+.hslot .ic.empty{background:#15100B;border:1px dashed var(--line);box-shadow:none}
+.hslot .ic svg{display:block}
+.hslot small{display:block;font-size:11px;color:var(--muted)}
+.hslot b{font-family:var(--f-display);font-size:16px;display:block;line-height:1.2}
+.hslot em{display:block;font-style:normal;font-size:11.5px;color:var(--muted)}
+.hcenter{flex:1.2 1 280px;min-width:0;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.portrait{width:200px;height:200px;border-radius:50%;background:radial-gradient(circle at 50% 40%,#2E2419,#15100B 70%);border:2px solid var(--gold);box-shadow:0 0 0 6px var(--panel),0 0 0 7px #4A3A26,0 0 40px rgba(210,165,74,.18);display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
+.plvl{width:36px;height:36px;margin-top:-28px;transform:rotate(45deg);background:var(--gold);border:2px solid var(--panel);display:grid;place-items:center}
+.plvl span{transform:rotate(-45deg);font-family:var(--f-mono);font-weight:700;font-size:15px;color:var(--gold-ink)}
+.hcenter .name{font-family:var(--f-display);font-weight:700;font-size:30px;line-height:1}
+.hcenter .cls{font-size:13px;color:var(--gold-hi)}
+.hbar{width:100%;max-width:250px;display:flex;flex-direction:column;gap:4px}
+.hbar .bar{height:6px;border-radius:3px;background:var(--line2)}
+.hbar .bar i{display:block;height:6px;border-radius:3px;background:var(--gold)}
+.hbar span{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.trialtag{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--boss);color:var(--seal-ink)}
+.hgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;width:100%}
+.card{border-radius:12px;background:var(--panel);border:1px solid var(--line);padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card.warm{background:#241A12;border-color:#7A4A2A}
+.card h3{font-size:18px}
+.check{display:flex;gap:8px;font-size:13px;align-items:flex-start}
+.check i{width:14px;height:14px;flex:none;border:1.5px solid var(--muted);margin-top:3px}
+.check.ok i{background:var(--moss);border-color:var(--moss)}
+.check.ok{color:var(--moss-ink)}
+.shoprow{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line2)}
+.shoprow span{flex:1;font-size:13.5px;min-width:0}
+.chron{background:var(--parch);color:var(--pink);border-radius:4px;box-shadow:inset 0 0 30px rgba(128,92,46,.4);padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.chron .e{display:flex;flex-direction:column;gap:2px;border-top:1px dashed #C2A877;padding-top:8px}
+.chron .e:first-of-type{border-top:0;padding-top:0}
+.chron .e b{font-size:12px;font-family:var(--f-mono);color:#7A5A2A}
+.chron .e p{margin:0;font-family:var(--f-display);font-style:italic;font-size:14.5px;line-height:1.45;overflow-wrap:anywhere}
+.notes textarea,.sheet textarea,.sheet input[type=text]{width:100%;border-radius:6px;padding:10px 12px;font-size:14.5px}
+.notes textarea{background:var(--night);border:1px solid var(--line);color:var(--ink);min-height:90px;resize:vertical}
+.tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.hint{font-size:13px;color:var(--muted);margin:0}
+
+/* quest sheet */
+.overlay{position:fixed;inset:0;z-index:20;background:rgba(8,6,4,.72);display:flex;justify-content:center;align-items:flex-start;overflow-y:auto;padding:calc(24px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+[hidden]{display:none!important}
+.sheet{position:relative;width:min(520px,100%);background:var(--parch);color:var(--pink);border-radius:3px;box-shadow:inset 0 0 40px rgba(120,80,30,.4),0 20px 40px rgba(0,0,0,.6);padding:30px 26px 22px;display:flex;flex-direction:column;gap:14px}
+.sheet .pin{position:absolute;left:50%;top:-10px;width:20px;height:20px;margin-left:-10px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#F3D27A,#A87A22 70%);box-shadow:0 2px 3px rgba(0,0,0,.5)}
+.sheet .x{position:absolute;right:10px;top:10px;width:36px;height:36px;border-radius:50%;border:1px solid #C2A877;background:none;cursor:pointer;color:var(--pmuted);font-size:18px;line-height:1}
+.sheet .kicker{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.12em;color:#8A5A08;text-transform:uppercase}
+.sheet h2{font-size:27px;line-height:1.1;color:var(--pink);padding-right:30px}
+.sheet .brief{font-family:var(--f-display);font-style:italic;font-size:16px;line-height:1.45;color:var(--pmuted);margin:0}
+.sheet .story{margin:0;font-size:13.5px;color:var(--pmuted)}
+.sheet .lock{display:flex;gap:12px;align-items:center;padding:12px;border-radius:4px;background:var(--parch2)}
+.sheet .lock .waxseal{width:46px;height:46px;font-size:16px;flex:none}
+.sheet .lock p{margin:0;font-size:13.5px}
+.sheet .lbl{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.12em;color:var(--pfaint);text-transform:uppercase}
+.sheet .wintext{margin:0;font-size:14px;border-top:1px dashed #C2A877;padding-top:10px;color:#4A3A26}
+.sheet .reward{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;font-family:var(--f-mono);font-weight:700}
+.sheet .reward .x2{color:#3A6229;font-size:22px}.sheet .reward .g2{color:#8A5A08;font-size:16px}
+.sheet .reward em{font-style:normal;font-family:var(--f-body);font-weight:500;font-size:12.5px;color:var(--pmuted)}
+.sheet details{font-size:13px;color:var(--pmuted)}
+.sheet details summary{cursor:pointer;color:#7A5A2A}
+.sheet details ul{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+.sheet .acts{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.sheet .acts .note-t{font-size:12.5px;color:var(--pfaint)}
+.sheet textarea,.sheet input[type=text]{background:#FBF4E4;border:1px solid #C2A877;color:var(--pink)}
+.sheet textarea{min-height:90px;resize:vertical}
+.sheet label.f{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--pmuted)}
+.sheet .btn.ghost{color:var(--pink);border-color:#C2A877}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);opacity:0;z-index:30;background:var(--panel);border:1px solid var(--gold);color:var(--ink);padding:12px 18px;border-radius:10px;font-size:14px;font-weight:600;max-width:min(560px,calc(100vw - 32px));transition:opacity .25s ease,transform .25s ease;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (max-width:820px){.hgrid{grid-template-columns:minmax(0,1fr)}.stats .xpw{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}.note{transform:none!important}}
+</style>
+
+<header class="top">
+  <div class="top-in gutter">
+    <div class="brand"><span class="mark" aria-hidden="true"><span>П</span></span><div><b>Путь проводника</b><span class="eyebrow">Этап 1 · Зона I</span></div></div>
+    <nav class="nav" role="tablist">
+      <button type="button" role="tab" data-view="board" id="tab-board">Доска</button>
+      <button type="button" role="tab" data-view="map" id="tab-map">Карта</button>
+      <button type="button" role="tab" data-view="hero" id="tab-hero">Персонаж</button>
+    </nav>
+    <div class="stats">
+      <span class="xpw">XP <b id="h-xp">0</b></span>
+      <span>Золото <b id="h-gold">0</b></span>
+      <span class="slots-mini" aria-label="Слоты"><span>Слоты</span><i id="s1"></i><i id="s2"></i></span>
+      <span class="lvl-mini" aria-label="Уровень"><span id="h-lvl">1</span></span>
+    </div>
+  </div>
+  <div class="xpline" aria-hidden="true"><i id="h-bar" style="width:0"></i></div>
+</header>
+
+<main class="gutter">
+  <section id="view-board" class="view" role="tabpanel"></section>
+  <section id="view-map" class="view" role="tabpanel" hidden></section>
+  <section id="view-hero" class="view" role="tabpanel" hidden></section>
+</main>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"></div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const DATA = /*DATA*/;
+/*ENGINE*/
+// --- адаптер: прототип использует движок как есть
+const C = DATA.content, RULES = C.rules, ZONE = C.zone, ZONE2 = DATA.zone2;
+const QUESTS = ZONE.quests, QBY = Object.fromEntries(QUESTS.map(q => [q.id, q])), KIND = RULES.kinds;
+const VALS = Object.fromEntries(QUESTS.map(q => [q.id, questValue(q, RULES)]));
+const CHAIN_OF = {}; for (const ch of ZONE.chains) for (const id of ch.quests) CHAIN_OF[id] = ch;
+const xpFor = xpForLevel;
+const PROTO = { pool: C.pool, shop: C.shop, tiers: RULES.tiers, rate: RULES.rate_kzt_per_gold.value,
+  map: Object.assign(Object.fromEntries(QUESTS.map(q => [q.id, q.map])), { size: ZONE.map.size, chest: ZONE.map.chest[ZONE.chains[0].id], boss: ZONE.map.boss }) };
+const seedEvents = () => structuredClone(DATA.seed); // content/seed.json
+
+const KEY = 'put-provodnika-v2';
+let S = { events: seedEvents(), notes: '' };
+try { const raw = localStorage.getItem(KEY); if (raw) { const p = JSON.parse(raw); if (p && Array.isArray(p.events)) S = { events: upgradeEvents(p.events, C), notes: p.notes || '' }; } } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+let D = derive(S.events, C);
+let view = 'board', openId = null, submitMode = false, chestMode = null;
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
+const TYPE = { main: ['ОСНОВНОЙ', 'r-main'], side: ['ПОБОЧНЫЙ', 'r-side'], prep: ['ПОДГОТОВКА', 'r-prep'] };
+const deadlineText = q => q.deadline ? 'до главы ' + q.deadline.split('-')[1] : '';
+const tierOf = ch => PROTO.tiers[ch.chest];
+const lockText = id => {
+  const r = D.reasons[id]; if (!r) return '';
+  const p = [];
+  if (r.missing.length) p.push('сдай ' + r.missing.map(d => '«' + QBY[d].title + '»').join(' и '));
+  if (r.needLevel) p.push('достигни ур. ' + r.needLevel);
+  return p.join(', ');
+};
+
+function dispatch(ev) { const err = canApply(ev, D, C); if (err) { toast(err); return null; } const before = D; ev.at = new Date().toISOString(); S.events.push(ev); save(); D = derive(S.events, C); return before; }
+
+function renderTop() {
+  const h = D.hero, cur = xpFor(h.level), nxt = xpFor(h.level + 1);
+  document.getElementById('h-lvl').textContent = h.level;
+  document.getElementById('h-xp').textContent = fmt(h.xp);
+  document.getElementById('h-gold').textContent = fmt(D.gold);
+  document.getElementById('h-bar').style.width = Math.min(100, (h.xp - cur) / (nxt - cur) * 100) + '%';
+  document.getElementById('s1').className = D.prog.length >= 1 ? 'on' : '';
+  document.getElementById('s2').className = D.prog.length >= 2 ? 'on' : '';
+  document.querySelectorAll('.nav button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === view)));
+}
+
+function banners() {
+  let h = '';
+  for (const ch of ZONE.chains) {
+    const c = D.chains[ch.id];
+    if (c.chest === 'ready') h += `<div class="banner"><p><b>Сундук готов.</b> Цепочка «${esc(ch.title)}» пройдена.</p><button class="btn small" type="button" data-chest="${ch.id}">Открыть сундук</button></div>`;
+    if (c.chest === 'opened') h += `<div class="banner"><p><b>Из сундука выпало:</b> ${esc(PROTO.pool.find(p => p.id === c.rec.item)?.title)}. 7 дней, чтобы купить.</p><button class="btn small" type="button" data-chest="${ch.id}">Открыть</button></div>`;
+    if (c.chest === 'empty_pool') h += `<div class="banner"><p>Цепочка «${esc(ch.title)}» пройдена, но в пуле меньше 3 вещей. Пополни список желаний.</p></div>`;
+  }
+  if (D.hero.blocked) h += `<div class="banner alarm"><p><b>Испытание уровня ${D.hero.level + 1}.</b> Опыта хватает. Чтобы подняться, сдай квест с тренировкой или боем.</p></div>`;
+  if (D.bossOpen) h += `<div class="banner"><p><b>Страж пропускает.</b> Ворота в главу 2 открыты: скопируй статус во вкладке «Персонаж» и пришли Claude.</p></div>`;
+  return h;
+}
+
+function taskList(q, interactive) {
+  const s = D.qs[q.id];
+  const next = q.tasks.find(t => !s.tasks[t.id] && !t.optional);
+  return `<ul class="ptasks">${q.tasks.map(t => {
+    const cls = s.tasks[t.id] ? 'done' : (interactive && t === next ? 'next' : '');
+    return `<li><label class="${cls}${interactive ? '' : ' off'}"><input type="checkbox" id="t-${esc(t.id)}" data-q="${esc(q.id)}" data-task="${esc(t.id)}" ${s.tasks[t.id] ? 'checked' : ''} ${interactive ? '' : 'disabled'}>${esc(t.text)}${t.optional ? ' (по желанию)' : ''}</label></li>`;
+  }).join('')}</ul>`;
+}
+
+function journal() {
+  const slots = D.prog.map((id, n) => {
+    const q = QBY[id], s = D.qs[id], ready = D.status[id] === 'ready';
+    return `<div class="jslot"><div class="row"><span>СЛОТ ${ROMAN[n + 1]} · ${ready ? 'МОЖНО СДАТЬ' : 'В РАБОТЕ'}</span><span class="ticks">${q.tasks.map(t => `<i class="${s.tasks[t.id] ? 'on' : ''}"></i>`).join('')}</span></div>
+      <h3><button type="button" data-open="${id}" style="all:unset;cursor:pointer">${esc(q.title)}</button></h3>
+      ${taskList(q, true)}
+      <span class="win">Победа: ${esc(q.win)}</span>
+      ${ready ? `<button class="btn rust" type="button" data-open="${id}" data-submitnow="1">Сдать квест</button>` : `<button class="btn pghost" type="button" disabled>Сдать квест · отметь все задачи</button>`}</div>`;
+  });
+  for (let n = D.prog.length; n < RULES.slots; n++) slots.push(`<div class="jempty"><span class="eyebrow" style="color:#C9A97A">Слот ${ROMAN[n + 1]}</span><b>Свободен</b><span>Сними заказ с доски</span></div>`);
+  return `<div class="journal"><div class="jh"><b>Журнал</b><span class="mono" style="font-size:12px;color:#C9A97A">${D.prog.length} / ${RULES.slots} слота</span></div>${slots.join('')}</div>`;
+}
+
+function renderBoard() {
+  const el = document.getElementById('view-board');
+  const full = D.prog.length >= RULES.slots;
+  const open = QUESTS.filter(q => D.status[q.id] === 'open');
+  const locked = QUESTS.filter(q => D.status[q.id] === 'locked');
+  const notes = open.map(q => {
+    const v = VALS[q.id], ch = CHAIN_OF[q.id], [rt, rc] = TYPE[q.type];
+    return `<article class="note"><span class="pin" aria-hidden="true"></span><span class="ribbon ${rc}">${rt}</span>
+      <h3>${esc(q.title)}</h3><span class="brief">${esc(q.brief)}</span>
+      ${q.deadline ? `<span class="flag deadline">Срочно · ${deadlineText(q)}</span>` : ''}${ch ? `<span class="flag chain">Цепочка «${esc(ch.title)}» · ${esc(tierOf(ch).title.toLowerCase())} сундук</span>` : ''}
+      <div class="foot"><span class="x">+${v.xp} XP</span><span class="g">+${v.gold} зол.</span></div>
+      <div class="acts"><button class="btn rust small" type="button" data-take="${q.id}" ${full ? 'disabled' : ''}>Снять заказ</button><button class="btn pghost small" type="button" data-open="${q.id}" style="color:var(--pmuted)">Подробнее</button></div></article>`;
+  });
+  const seals = locked.map(q => {
+    const r = D.reasons[q.id], n = r.missing.length;
+    const seal = n ? `<span class="waxseal">${ROMAN[Math.min(n, 5)]}</span>` : `<span class="waxseal lvl">ур. ${r.needLevel}</span>`;
+    return `<button type="button" class="note sealed" data-open="${q.id}"><span class="pin" aria-hidden="true"></span><span class="q">${esc(q.title)}</span>${seal}<span class="cond">Печать снимется, когда ${esc(lockText(q.id))}</span></button>`;
+  });
+  const keys = D.bossKeys.map(k => `<span class="${k.ok ? 'ok' : ''}">${esc(k.id)}</span>`).join('');
+  const boss = `<button type="button" class="note wanted" data-boss="1"><span class="pin" aria-hidden="true"></span><span class="w">РАЗЫСКИВАЕТСЯ</span><h3 style="font-size:17px">Страж перевала</h3><span class="cond" style="font-size:12.5px;color:#4A3A26">Пропустит в главу 2 «${esc(ZONE2.title)}» с ${D.bossKeys.length} ключами и на ур. ${ZONE2.min_level}</span><div class="keys">${keys}</div></button>`;
+  el.innerHTML = `${banners()}<div class="main"><div class="board-head"><b>Заказы гильдии</b><span>${open.length} открыто · ${locked.length} под печатью · 1 босс</span></div>
+    <div class="board">${notes.join('')}${seals.join('')}${boss}</div></div>
+    <aside class="side">${journal()}<div class="side-card"><h3>Как это работает</h3><p class="hint">Сними заказ — он займёт слот в журнале. Отмечай задачи прямо там. Награда считается из того, что ты делаешь: чтение, тренировка, бой с реальными людьми или оформление.</p></div></aside>`;
+}
+
+function renderMap() {
+  const el = document.getElementById('view-map');
+  const P = PROTO.map, W = P.size.w, H = P.size.h;
+  let paths = '';
+  const curve = (a, b) => { const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, dx = b.x - a.x, dy = b.y - a.y; return `M${a.x} ${a.y} Q${mx - dy * 0.15} ${my + dx * 0.15} ${b.x} ${b.y}`; };
+  for (const q of QUESTS) for (const d of q.deps) {
+    const a = P[d], b = P[q.id]; if (!a || !b) continue;
+    const chainEdge = CHAIN_OF[q.id] && CHAIN_OF[q.id] === CHAIN_OF[d];
+    const ok = D.qs[d].done;
+    if (chainEdge) paths += `<path d="${curve(a, b)}" fill="none" stroke="var(--route)" stroke-width="3" stroke-linecap="round"/>`;
+    else paths += `<path d="${curve(a, b)}" fill="none" stroke="${ok ? 'var(--map-ink)' : 'var(--pencil)'}" stroke-width="${ok ? 2 : 1.6}" stroke-dasharray="${ok ? '1 7' : '2 7'}" stroke-linecap="round"/>`;
+  }
+  const ch = ZONE.chains[0], cs = D.chains[ch.id], lastQ = P[ch.quests.at(-1)], C = P.chest, B = P.boss;
+  paths += `<path d="${curve(lastQ, C)}" fill="none" stroke="var(--route)" stroke-width="2.4" stroke-dasharray="6 6" stroke-linecap="round"/>`;
+  paths += `<path d="${curve(P['1.8'], B)}" fill="none" stroke="var(--map-ink)" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round"/>`;
+  const decor = `<g fill="none" stroke="#6E5532" stroke-width="1.6"><path d="M640 120 l14 -22 l14 22"/><path d="M662 124 l12 -18 l12 18"/><path d="M622 128 l10 -15 l10 15"/><path d="M460 92 l12 -18 l12 18"/><path d="M480 98 l10 -15 l10 15"/></g>
+    <path d="M60 300 C110 340 120 400 100 450 C88 490 110 540 150 580" fill="none" stroke="#7F9AA0" stroke-width="5" stroke-linecap="round" opacity=".7"/>
+    <g fill="#7C8A55" opacity=".7"><circle cx="420" cy="420" r="7"/><circle cx="434" cy="412" r="6"/><circle cx="442" cy="426" r="7"/><circle cx="230" cy="470" r="5"/><circle cx="242" cy="462" r="6"/><circle cx="254" cy="472" r="5"/></g>
+    <g transform="translate(96 98)"><circle r="26" fill="none" stroke="#8A6A3C" stroke-width="1"/><polygon points="0,-30 5,-5 0,0 -5,-5" fill="#8A3B22"/><polygon points="0,30 5,5 0,0 -5,5" fill="#8A6A3C"/><polygon points="-30,0 -5,-5 0,0 -5,5" fill="#8A6A3C"/><polygon points="30,0 5,-5 0,0 5,5" fill="#8A6A3C"/></g>`;
+  const marks = QUESTS.map(q => {
+    const p = P[q.id], st = D.status[q.id], s = D.qs[q.id];
+    const sym = st === 'done' ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F4DDC8" stroke-width="3.2" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>' : st === 'open' ? '!' : '?';
+    const halo = st === 'open' || st === 'prog' || st === 'ready';
+    let sub = '';
+    if (st === 'prog' || st === 'ready') sub = `<small>${st === 'ready' ? 'можно сдать' : 'в работе'} · ${doneCount(s)}/${q.tasks.length}</small>`;
+    else if (st === 'open') sub = `<small>можно взять</small>`;
+    const ly = st === 'done' ? 22 : st === 'locked' ? 22 : 28;
+    return `<button type="button" class="mk ${st}${halo ? ' halo' : ''}" style="left:${p.x}px;top:${p.y}px" data-open="${q.id}" aria-label="${esc(q.title)}"><span class="shield">${sym}</span></button>
+      <span class="mlabel${st === 'locked' ? ' locked' : ''}" style="left:${p.x}px;top:${p.y + ly}px">${esc(q.title)}${sub}</span>`;
+  }).join('');
+  const chestLbl = { locked: `осталось ${cs.total - cs.done} из ${cs.total} квестов`, ready: 'готов — открыть!', empty_pool: 'пул пуст', opened: 'вещь выпала', received: 'получен', swapped: 'обменян' }[cs.chest];
+  const chest = `<button type="button" class="chestmk${cs.chest === 'ready' ? ' ready' : ''}" style="left:${C.x}px;top:${C.y}px" data-chest="${ch.id}" aria-label="Сундук цепочки ${esc(ch.title)}"><span class="box" style="display:block"></span></button>
+    <span class="mlabel" style="left:${C.x}px;top:${C.y + 26}px">${esc(tierOf(ch).title)} сундук<small>${esc(chestLbl)}</small></span>`;
+  const got = D.bossKeys.filter(k => k.ok).length;
+  const boss = `<button type="button" class="bossmk${D.bossOpen ? ' open' : ''}" style="left:${B.x}px;top:${B.y}px" data-boss="1" aria-label="Страж перевала"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="${D.bossOpen ? '#B9D6A4' : '#E9A08E'}" stroke-width="2" aria-hidden="true"><path d="${D.bossOpen ? 'M6 12l4 4 8-9' : 'M7 7l10 10M17 7L7 17'}"/></svg></button>
+    <div class="bosstext" style="left:${B.x + 40}px;top:${B.y - 22}px"><span class="eyebrow" style="color:#D97A63">Страж перевала</span><span style="font-size:12.5px;color:#E8D2C0">Босс зоны · ${got}/${D.bossKeys.length} ключа</span><span style="font-size:11.5px;color:var(--muted)">Награда: путь в главу 2</span></div>`;
+  const fog = `<div class="fogzone"><b>${esc(ZONE2.title)}</b><span>Земли за перевалом не нанесены на карту</span><span>Допуск: ур. ${ZONE2.min_level}${D.hero.level >= ZONE2.min_level ? ' ✓' : ''}</span><span>Там легендарный сундук</span></div>`;
+  const prog = QUESTS.filter(q => D.status[q.id] === 'prog' || D.status[q.id] === 'ready');
+  const open = QUESTS.filter(q => D.status[q.id] === 'open');
+  const row = (q, cls, meta) => `<button type="button" class="zrow ${cls}" data-open="${q.id}"><span class="sh"></span><span class="t">${esc(q.title)}</span><span class="m">${meta}</span></button>`;
+  el.innerHTML = `${banners()}<div class="main"><div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;margin-bottom:12px"><h2 style="font-size:26px">Зона I · ${esc(ZONE.title)}</h2><span class="hint">Красный путь ведёт к сундуку. Нажми на метку, чтобы открыть квест.</span></div>
+    <div class="map-box"><div class="map" style="width:${W}px;height:${H}px">
+      <div class="glow" style="left:560px;top:-60px;width:420px;height:420px;background:radial-gradient(circle,rgba(74,60,42,.55),rgba(11,8,6,0) 70%)"></div>
+      <div class="glow" style="left:640px;top:330px;width:380px;height:380px;background:radial-gradient(circle,rgba(64,52,36,.5),rgba(11,8,6,0) 70%)"></div>
+      <div class="isle"></div>
+      <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${decor}${paths}</svg>
+      ${fog}${marks}${chest}${boss}
+    </div></div></div>
+    <aside class="side"><div class="side-card"><h3>Журнал зоны</h3>
+      <div class="zlist"><span class="eyebrow">В работе · ${prog.length} / ${RULES.slots}</span>${prog.map(q => row(q, 'prog', `${doneCount(D.qs[q.id])}/${q.tasks.length}`)).join('') || '<p class="hint">Пусто — сними заказ с доски.</p>'}</div>
+      <div class="zlist"><span class="eyebrow">Доступно · ${open.length}</span>${open.map(q => row(q, 'open', q.deadline ? deadlineText(q) : TYPE[q.type][0].toLowerCase())).join('')}</div>
+      <div style="border-top:1px solid var(--line2);padding-top:10px;display:flex;flex-direction:column;gap:6px">
+        <div class="kv"><span>Пройдено</span><span style="color:var(--moss-ink)">${D.seq.length}</span></div>
+        <div class="kv" style="color:var(--muted)"><span>Под печатью</span><span>${QUESTS.filter(q => D.status[q.id] === 'locked').length}</span></div></div></div>
+      <div class="side-card" style="background:#241A12;border-color:#7A4A2A;flex-direction:row;align-items:center;gap:14px">
+        <span class="chestmk" style="position:static;transform:none"><span class="box" style="display:block"></span></span>
+        <div style="display:flex;flex-direction:column;gap:3px;min-width:0"><b style="font-family:var(--f-display);font-size:15px">${esc(tierOf(ch).title)} сундук · ${esc(tierOf(ch).range)}</b><span style="font-size:12.5px;color:#D9C293">В конце цепочки «${esc(ch.title)}»: ${ch.quests.map(id => esc(QBY[id].title)).join(' → ')}. Что внутри — узнаешь, когда откроешь.</span></div></div>
+    </aside>`;
+}
+
+const ICON = {
+  quests: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg>',
+  tasks: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 12l4 4 10-10"/></svg>',
+  battle: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 4h6v6l-9 9-3-3z"/><path d="M5 16l3 3M4 20l2-2"/></svg>',
+  reward: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="9" width="16" height="11" rx="2"/><path d="M4 13h16M12 9v11M8 9c-2-3 1-5 4 0 3-5 6-3 4 0"/></svg>'
+};
+function renderHero() {
+  const el = document.getElementById('view-hero');
+  const h = D.hero, cur = xpFor(h.level), nxt = xpFor(h.level + 1);
+  const stat = (ic, label, val, sub, gold) => `<div class="hslot"><span class="ic${gold ? ' gold' : ''}" style="color:${gold ? 'var(--gold-hi)' : 'var(--ink)'}">${val}</span><div><small>${label}</small><b>${sub}</b></div></div>`;
+  const ch = ZONE.chains[0], cs = D.chains[ch.id];
+  const trophies = [];
+  if (cs.rec && cs.rec.state === 'received') trophies.push(`<div class="hslot"><span class="ic gold">${ICON.reward}</span><div><small>Сундук «${esc(ch.title)}»</small><b>${esc(PROTO.pool.find(p => p.id === cs.rec.item)?.title)}</b><em>${esc(tierOf(ch).title.toLowerCase())}</em></div></div>`);
+  D.shop.forEach(s => trophies.push(`<div class="hslot"><span class="ic">${ICON.reward}</span><div><small>Казна</small><b>${esc(PROTO.shop.find(x => x.id === s.item)?.title)}</b><em>${s.gold} золота</em></div></div>`));
+  if (!(cs.rec && cs.rec.state === 'received')) trophies.unshift(`<div class="hslot"><span class="ic empty" style="color:#4E4232">${ICON.reward}</span><div><small>Слот сундука «${esc(ch.title)}»</small><b style="color:#7E6A4A;font-family:var(--f-body);font-size:14px;font-weight:400">${cs.chest === 'locked' ? `осталось ${cs.total - cs.done} из ${cs.total} квестов` : 'сундук ждёт на карте'}</b></div></div>`);
+  while (trophies.length < 4) trophies.push(`<div class="hslot"><span class="ic empty"></span><div><small>Трофей</small><b style="color:#7E6A4A;font-family:var(--f-body);font-size:14px;font-weight:400">пустой слот</b></div></div>`);
+  const chron = D.archive.slice().reverse().filter(a => D.qs[a.q].done && D.qs[a.q].at === a.at).map(a => `<div class="e"><b>${esc(QBY[a.q].title)} · +${VALS[a.q].xp} XP</b><p>${esc(a.note)}</p>${a.links ? `<span style="font-size:12px;color:var(--pmuted);overflow-wrap:anywhere">${esc(a.links)}</span>` : ''}</div>`).join('');
+  const shop = PROTO.shop.map(it => `<div class="shoprow"><span>${esc(it.title)}</span><span class="mono" style="flex:none;color:var(--gold-hi);font-size:13px">${it.gold}</span><button class="btn small" type="button" data-buy="${it.id}" ${D.gold >= it.gold ? '' : 'disabled'}>Купить</button></div>`).join('');
+  const needXp = Math.max(0, nxt - h.xp);
+  const trialNeeded = h.level >= RULES.level.trial_from_level || h.level + 1 >= RULES.level.trial_from_level + 1;
+  const got = D.bossKeys.filter(k => k.ok).length;
+  el.innerHTML = `${banners()}<div class="heropanel">
+      <div class="hcol"><span class="eyebrow">Итоги</span>
+        ${stat('quests', 'Заказов сдано', D.seq.length, 'квестов', false)}
+        ${stat('tasks', 'Действий завершено', D.tasksDone, 'задач', false)}
+        ${stat('battle', 'Внешних событий', D.battles, 'боёв с людьми', false)}
+        ${stat('reward', 'Наград получено', D.received, 'вещей и плюшек', true)}</div>
+      <div class="hcenter">
+        <div class="portrait"><svg width="150" height="170" viewBox="0 0 120 160" aria-hidden="true"><path d="M60 18 C40 18 30 38 30 58 L27 98 C20 110 13 130 11 160 L109 160 C107 130 100 110 93 98 L90 58 C90 38 80 18 60 18 Z" fill="#3A2E20" stroke="#8A6A3C" stroke-width="1.5"/><ellipse cx="60" cy="66" rx="16" ry="20" fill="#100C08"/><path d="M44 110 L60 130 L76 110" fill="none" stroke="#D2A54A" stroke-width="2"/></svg></div>
+        <span class="plvl"><span>${h.level}</span></span>
+        <span class="name">Денис</span><span class="cls">Проводник собственника</span>
+        <div class="hbar"><div class="bar"><i style="width:${Math.min(100, (h.xp - cur) / (nxt - cur) * 100)}%"></i></div><span>${fmt(h.xp)} / ${fmt(nxt)} XP до ур. ${h.level + 1}</span></div>
+        ${h.blocked ? '<span class="trialtag">ждёт испытания</span>' : ''}
+      </div>
+      <div class="hcol"><span class="eyebrow">Трофеи</span>${trophies.slice(0, 4).join('')}</div>
+    </div>
+    <div class="hgrid">
+      <section class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><h3>Казна</h3><span class="mono" style="color:var(--gold-hi);font-size:20px;font-weight:700">${fmt(D.gold)}</span></div>
+        <p class="hint">Золото за работу. Витрина и курс ${PROTO.rate} ₸ за золото — заглушки.</p>${shop}</section>
+      <section class="chron"><span class="eyebrow" style="color:#7A5A2A">Летопись · что сдано</span>${chron || '<p style="margin:0">Пока пусто.</p>'}</section>
+      <section class="card warm"><h3>До уровня ${h.level + 1}</h3>
+        <span class="check${needXp === 0 ? ' ok' : ''}"><i></i>Опыт: ещё ${fmt(needXp)} XP</span>
+        ${h.level >= RULES.level.trial_from_level ? `<span class="check${!h.needTrial ? ' ok' : ''}"><i></i>Испытание: сдать квест с тренировкой или боем</span>` : `<span class="check" style="color:var(--muted)"><i></i>С уровня ${RULES.level.trial_from_level} для повышения понадобится испытание</span>`}
+        <h3 style="margin-top:6px">До главы 2</h3>
+        <span class="check${got === D.bossKeys.length ? ' ok' : ''}"><i></i>Ключи стража: ${got} из ${D.bossKeys.length}</span>
+        <span class="check${h.level >= ZONE2.min_level ? ' ok' : ''}"><i></i>Уровень ${ZONE2.min_level}</span></section>
+    </div>
+    <section class="card notes" style="width:100%"><h3>Заметки по прототипу</h3>
+      <label class="hint" for="notes">Что неудобно, непонятно или считается не так. Попадёт в статус для Claude.</label>
+      <textarea id="notes" placeholder="Например: квест открылся раньше, чем я ожидал">${esc(S.notes)}</textarea>
+      <div class="tools"><button class="btn" id="copy" type="button">Скопировать статус для Claude</button><button class="btn ghost" id="copy-json" type="button">Скопировать журнал событий (JSON)</button><button class="btn ghost" id="reset" type="button">Сбросить прогресс</button><span class="hint" id="reset-note"></span></div>
+      <textarea id="copy-fallback" hidden readonly aria-label="Статус для копирования"></textarea></section>`;
+  document.getElementById('notes').oninput = e => { S.notes = e.target.value; save(); };
+  document.getElementById('copy').onclick = copyStatus;
+  document.getElementById('copy-json').onclick = () => copyText(JSON.stringify({ version: RULES.version, exported: new Date().toISOString(), events: S.events, notes: S.notes }), 'Журнал событий скопирован');
+  let armed = false;
+  document.getElementById('reset').onclick = () => {
+    const n = document.getElementById('reset-note');
+    if (!armed) { armed = true; n.textContent = 'Нажми ещё раз, чтобы вернуть состояние на 22 октября.'; setTimeout(() => { armed = false; n.textContent = ''; }, 4000); return; }
+    S = { events: seedEvents(), notes: S.notes }; save(); D = derive(S.events, C); render(); toast('Прогресс сброшен');
+  };
+}
+
+const STL = { done: 'сдан', prog: 'в работе', ready: 'можно сдать', open: 'доступен', locked: 'под печатью' };
+function statusText() {
+  const lines = QUESTS.map(q => { const st = D.status[q.id], s = D.qs[q.id]; let l = `${q.id} ${q.title}: ${STL[st]}`; if (st !== 'locked') l += ` (${doneCount(s)}/${q.tasks.length})`; return l; });
+  return `Путь проводника, статус на ${new Date().toLocaleDateString('ru-RU')}\nУровень ${D.hero.level}, ${D.hero.xp} XP, золото ${D.gold}${D.hero.blocked ? ', ждёт испытания' : ''}\n${lines.join('\n')}\nСундук «${ZONE.chains[0].title}»: ${D.chains[ZONE.chains[0].id].chest}\nСтраж: ${D.bossKeys.filter(k => k.ok).length}/${D.bossKeys.length} ключей\n\nЗаметки по прототипу:\n${S.notes || '—'}`;
+}
+function copyText(text, ok) {
+  const fb = () => { const ta = document.getElementById('copy-fallback'); ta.hidden = false; ta.value = text; ta.focus(); ta.select(); toast('Выдели текст и скопируй вручную'); };
+  try { navigator.clipboard.writeText(text).then(() => toast(ok)).catch(fb); } catch (e) { fb(); }
+}
+function copyStatus() { copyText(statusText(), 'Статус скопирован. Вставь его в чат с Claude'); }
+
+function renderSheet() {
+  const ov = document.getElementById('overlay'), sh = document.getElementById('sheet');
+  if (!openId && !chestMode) { ov.hidden = true; return; }
+  ov.hidden = false;
+  const head = `<span class="pin" aria-hidden="true"></span><button class="x" type="button" data-close="1" aria-label="Закрыть">×</button>`;
+  if (chestMode) { sh.innerHTML = head + chestBody(); return; }
+  if (openId === 'boss') {
+    sh.innerHTML = `${head}<span class="kicker">Босс зоны I</span><h2 id="sheet-title">Страж перевала</h2>
+      <p class="brief">Пропустит в главу 2 «${esc(ZONE2.title)}» — к живым собственникам — когда соберёшь ключи и дорастёшь до ур. ${ZONE2.min_level}.</p>
+      <span class="lbl">Ключи</span><ul class="ptasks">${D.bossKeys.map(k => `<li><label class="${k.ok ? 'done' : ''} off"><input type="checkbox" disabled ${k.ok ? 'checked' : ''}>${esc(QBY[k.id].title)}</label></li>`).join('')}
+      <li><label class="${D.hero.level >= ZONE2.min_level ? 'done' : ''} off"><input type="checkbox" disabled ${D.hero.level >= ZONE2.min_level ? 'checked' : ''}>Уровень ${ZONE2.min_level} (сейчас ${D.hero.level})</label></li></ul>
+      <p class="wintext">Награда: путь в главу 2, где ждут большой и легендарный сундуки.</p>`;
+    return;
+  }
+  const q = QBY[openId], st = D.status[q.id], v = VALS[q.id], ch = CHAIN_OF[q.id], [rt] = TYPE[q.type];
+  const interactive = st === 'prog' || st === 'ready';
+  const full = D.prog.length >= RULES.slots;
+  const kicker = [rt.charAt(0) + rt.slice(1).toLowerCase(), st === 'done' ? 'сдан' : st === 'prog' ? 'в работе' : st === 'ready' ? 'можно сдать' : st === 'open' ? 'можно взять' : 'под печатью'].join(' · ');
+  const lock = st === 'locked' ? `<div class="lock"><span class="waxseal">${D.reasons[q.id].missing.length ? ROMAN[Math.min(D.reasons[q.id].missing.length, 5)] : 'ур.'}</span><p>Печать снимется, когда ${esc(lockText(q.id))}.</p></div>` : '';
+  const extra = [];
+  if (ch) extra.push(`цепочка «${esc(ch.title)}» → ${esc(tierOf(ch).title.toLowerCase())} сундук`);
+  if (q.deadline) extra.push(deadlineText(q));
+  if (v.trial && (D.hero.level >= RULES.level.trial_from_level)) extra.push('засчитывается как испытание');
+  const calc = `<details><summary>Как посчитана награда</summary><ul>${v.parts.map(p => `<li>${esc(KIND[p.kind].label.toLowerCase())} → +${Math.round(p.xp)} XP, +${Math.round(p.gold * 10) / 10} зол.</li>`).join('')}</ul></details>`;
+  let acts = '';
+  if (st === 'open') acts = `<button class="btn rust" type="button" data-take="${q.id}" ${full ? 'disabled' : ''}>Снять заказ</button><span class="note-t">${full ? 'Оба слота заняты.' : 'Займёт слот в журнале.'}</span>`;
+  if (st === 'prog') acts = `<button class="btn pghost" type="button" disabled>Сдать · отметь все задачи</button><button class="btn ghost small" type="button" data-drop="${q.id}">Отложить</button>`;
+  if (st === 'ready' && !submitMode) acts = `<button class="btn rust" type="button" data-submit="1">Сдать квест</button><button class="btn ghost small" type="button" data-drop="${q.id}">Отложить</button>`;
+  if (st === 'ready' && submitMode) acts = `<form id="sub-form" style="display:flex;flex-direction:column;gap:10px;width:100%">
+      <label class="f" for="sub-note">Что сделал — 1–3 предложения${v.trial ? '. Для тренировки: с кем и что вышло' : ''}</label><textarea id="sub-note" required></textarea>
+      <label class="f" for="sub-links">Ссылки на результат (по желанию)</label><input type="text" id="sub-links">
+      <div class="acts"><button class="btn rust" type="submit">Сдать: +${v.xp} XP, +${v.gold} зол.</button><button class="btn ghost small" type="button" data-unsubmit="1">Отмена</button></div></form>`;
+  if (st === 'done') acts = `<button class="btn ghost small" type="button" data-reopen="${q.id}" ${full ? 'disabled' : ''}>Вернуть в работу</button><span class="note-t">XP и золото снимутся до повторной сдачи.</span>`;
+  sh.innerHTML = `${head}<span class="kicker">${kicker}</span><h2 id="sheet-title">${esc(q.title)}</h2>
+    <p class="brief">${esc(q.brief)}</p>${lock}
+    ${taskList(q, interactive)}
+    <p class="wintext"><b>Победа:</b> ${esc(q.win)}</p>
+    <div class="reward"><span class="x2">+${v.xp} XP</span><span class="g2">+${v.gold} золота</span>${extra.length ? `<em>${extra.join(' · ')}</em>` : ''}</div>
+    ${calc}<div class="acts">${acts}</div>`;
+  const f = sh.querySelector('#sub-form');
+  if (f) {
+    f.onsubmit = e => {
+      e.preventDefault();
+      const note = sh.querySelector('#sub-note').value.trim();
+      if (!note) { toast('Напиши, что сделал, хотя бы одним предложением'); return; }
+      const before = dispatch({ t: 'quest_submitted', q: q.id, note, links: sh.querySelector('#sub-links').value.trim() });
+      if (!before) return;
+      submitMode = false; openId = null;
+      const msg = [`Квест сдан · +${v.xp} XP · +${v.gold} зол.`];
+      if (D.hero.level > before.hero.level) msg.push(`уровень ${D.hero.level}!`);
+      if (D.hero.blocked && !before.hero.blocked) msg.push('нужно испытание');
+      const opened = QUESTS.filter(x => before.status[x.id] === 'locked' && D.status[x.id] === 'open').map(x => '«' + x.title + '»');
+      if (opened.length) msg.push('печать снята: ' + opened.join(', '));
+      for (const c of ZONE.chains) if (!before.chains[c.id].complete && D.chains[c.id].complete) msg.push('сундук готов');
+      if (!before.bossOpen && D.bossOpen) msg.push('страж пропускает');
+      render(); toast(msg.join(' · '));
+    };
+    setTimeout(() => sh.querySelector('#sub-note')?.focus(), 0);
+  }
+}
+
+function chestBody() {
+  const ch = ZONE.chains.find(c => c.id === chestMode), c = D.chains[ch.id], tier = tierOf(ch);
+  const inTier = D.pool.filter(p => p.tier === ch.chest);
+  let body = '';
+  if (c.chest === 'locked') body = `<p class="brief">Пройди цепочку «${esc(ch.title)}», чтобы открыть.</p><ul class="ptasks">${ch.quests.map(id => `<li><label class="${D.qs[id].done ? 'done' : ''} off"><input type="checkbox" disabled ${D.qs[id].done ? 'checked' : ''}>${esc(QBY[id].title)}</label></li>`).join('')}</ul>`;
+  if (c.chest === 'empty_pool') body = `<p class="brief">В пуле меньше 3 вещей. Пополни список желаний.</p>`;
+  if (c.chest === 'ready') body = `<p class="brief">Внутри одна из ${inTier.length} вещей ценой ${esc(tier.range)}. Какая — узнаешь, когда откроешь. Переиграть нельзя.</p><div class="acts"><button class="btn rust" type="button" data-roll="${ch.id}">Открыть сундук</button></div>`;
+  if (c.chest === 'opened') {
+    const it = PROTO.pool.find(p => p.id === c.rec.item), swap = swapValue(it, RULES);
+    body = `<p class="brief">Выпало: <b>${esc(it.title)}</b>, ~${fmt(it.price)} ₸. Купи в течение 7 дней и отметь, или обменяй на золото.</p>
+      <label class="f" for="photo">Ссылка на фото (по желанию)</label><input type="text" id="photo">
+      <div class="acts"><button class="btn moss" type="button" data-receive="${ch.id}">Получил</button><button class="btn ghost small" type="button" data-swap="${ch.id}" data-gold="${swap}">Обменять на ${fmt(swap)} зол.</button></div>`;
+  }
+  if (c.chest === 'received') body = `<p class="brief">Вещь на полке трофеев: ${esc(PROTO.pool.find(p => p.id === c.rec.item)?.title)}.</p>`;
+  if (c.chest === 'swapped') body = `<p class="brief">Обменян на ${fmt(c.rec.gold)} золота. Вещь вернулась в пул.</p>`;
+  return `<span class="kicker">Сундук цепочки «${esc(ch.title)}» · пул — заглушки</span><h2 id="sheet-title">${esc(tier.title)} сундук</h2>${body}`;
+}
+
+function toast(m) { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 3800); }
+
+function render() {
+  renderTop();
+  ['board', 'map', 'hero'].forEach(v => document.getElementById('view-' + v).hidden = v !== view);
+  if (view === 'board') renderBoard(); if (view === 'map') renderMap(); if (view === 'hero') renderHero();
+  renderSheet();
+}
+
+document.addEventListener('change', e => {
+  const c = e.target; if (c.type !== 'checkbox' || !c.dataset.q) return;
+  dispatch({ t: 'task_set', q: c.dataset.q, task: c.dataset.task, v: c.checked }); render();
+});
+document.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const d = b.dataset;
+  if (d.view) { view = d.view; try { history.replaceState(null, '', '#' + view); } catch (x) {} openId = null; chestMode = null; render(); return; }
+  if (d.open) { openId = d.open; chestMode = null; submitMode = !!d.submitnow; render(); return; }
+  if (d.boss) { openId = 'boss'; chestMode = null; render(); return; }
+  if (d.close) { openId = null; chestMode = null; submitMode = false; render(); return; }
+  if (d.chest) { chestMode = d.chest; openId = null; render(); return; }
+  if (d.take) { if (D.prog.length >= RULES.slots) { toast('Оба слота заняты'); return; } dispatch({ t: 'quest_taken', q: d.take }); openId = null; render(); toast(`«${QBY[d.take].title}» в журнале`); return; }
+  if (d.drop) { dispatch({ t: 'quest_dropped', q: d.drop }); openId = null; render(); toast('Квест отложен, слот свободен'); return; }
+  if (d.reopen) { dispatch({ t: 'quest_reopened', q: d.reopen }); render(); toast('Квест снова в работе'); return; }
+  if (d.submit) { submitMode = true; render(); return; }
+  if (d.unsubmit) { submitMode = false; render(); return; }
+  if (d.roll) { const ch = ZONE.chains.find(c => c.id === d.roll), opts = D.pool.filter(p => p.tier === ch.chest); const it = opts[Math.floor(Math.random() * opts.length)]; dispatch({ t: 'chest_opened', chain: ch.id, item: it.id }); render(); return; }
+  if (d.receive) { dispatch({ t: 'chest_received', chain: d.receive, photo: document.getElementById('photo')?.value.trim() || '' }); chestMode = null; render(); toast('Вещь на полке трофеев'); return; }
+  if (d.swap) { dispatch({ t: 'chest_swapped', chain: d.swap, gold: +d.gold }); render(); toast(`+${d.gold} золота`); return; }
+  if (d.buy) { const it = PROTO.shop.find(x => x.id === d.buy); if (D.gold < it.gold) return; dispatch({ t: 'shop_bought', item: it.id, gold: it.gold }); render(); toast(`Куплено: ${it.title}`); return; }
+});
+document.getElementById('overlay').addEventListener('click', e => { if (e.target.id === 'overlay') { openId = null; chestMode = null; submitMode = false; render(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && (openId || chestMode)) { openId = null; chestMode = null; submitMode = false; render(); } });
+const h0 = (location.hash || '').slice(1); if (['board', 'map', 'hero'].includes(h0)) view = h0;
+render();
+</script>
