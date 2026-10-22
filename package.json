@@ -1,0 +1,10 @@
+{
+  "name": "put-provodnika",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --experimental-strip-types --no-warnings engine/cli/check.ts",
+    "test": "node --experimental-strip-types --no-warnings --test engine/test/*.test.ts",
+    "build:proto": "node --experimental-strip-types --no-warnings engine/cli/build-proto.ts"
+  }
+}
