@@ -297,6 +297,7 @@ content/
   zones/zone-2.json     тизер под туманом
   rewards/pool.json     список желаний (приватно)
   rewards/shop.json     витрина казны
+  seed.json             стартовые события (состояние на 22.10.2026)
 engine/
   src/engine.ts         вся логика: награда, уровень, испытание, derive, canApply, simulate, validate
   node/load.ts          загрузка контента
@@ -309,6 +310,7 @@ proto/
   template.html         прототип; собирается из шаблона, контента и движка
 docs/
   spec.md · data-flow.md · logic-workflow.md · handoff.md
+app/ · components/ · lib/   сайт на Next.js: маршруты, плашки, контент и хранилище событий
 ```
 
 ### В базе — одна таблица событий

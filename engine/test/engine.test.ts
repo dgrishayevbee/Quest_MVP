@@ -2,9 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { questValue, xpForLevel, derive, validate, simulate, canApply, swapValue, upgradeEvents } from '../src/engine.ts';
+import { questValue, xpForLevel, derive, validate, simulate, canApply, swapValue, upgradeEvents, resolveIntent } from '../src/engine.ts';
 import type { GameEvent, Content } from '../src/engine.ts';
-import { loadContent, ROOT } from '../node/load.ts';
+import { loadContent, loadJson, ROOT } from '../node/load.ts';
 
 const c = loadContent();
 const Q = (id: string) => c.zone.quests.find(q => q.id === id)!;
@@ -100,6 +100,30 @@ test('сундук: открыть, обменять, вещь возвраща�
   s = derive(ev, c);
   assert.equal(s.pool.length, 3);
   assert.equal(s.chains.voice.chest, 'swapped');
+});
+
+test('намерение: вещь из сундука и суммы считает движок, а не клиент', () => {
+  const ev = play(['1.1', '1.2', 'П.1', 'П.2', 'П.3', '1.3', '1.6', 'Ф.3', '1.7']);
+  let s = derive(ev, c);
+  const big = s.pool.filter(p => p.tier === 'big').map(p => p.id);
+  const first = resolveIntent({ t: 'chest_opened', chain: 'voice' }, s, c, () => 0);
+  const last = resolveIntent({ t: 'chest_opened', chain: 'voice' }, s, c, () => 0.999);
+  assert.deepEqual([first.event, last.event], [{ t: 'chest_opened', chain: 'voice', item: big[0] }, { t: 'chest_opened', chain: 'voice', item: big.at(-1) }]);
+  assert.equal(resolveIntent({ t: 'chest_swapped', chain: 'voice' }, s, c).error, 'Сундук не открыт');
+  ev.push(first.event!); s = derive(ev, c);
+  assert.equal(resolveIntent({ t: 'chest_opened', chain: 'voice' }, s, c).error, 'Сундук не готов');
+  const swap = resolveIntent({ t: 'chest_swapped', chain: 'voice', gold: 99999 } as never, s, c);
+  assert.deepEqual(swap.event, { t: 'chest_swapped', chain: 'voice', gold: swapValue(c.pool.find(p => p.id === big[0])!, c.rules) });
+  const buy = resolveIntent({ t: 'shop_bought', item: c.shop[0].id, gold: 0 } as never, s, c);
+  assert.deepEqual(buy.event, { t: 'shop_bought', item: c.shop[0].id, gold: c.shop[0].gold });
+  assert.equal(resolveIntent({ t: 'shop_bought', item: 'нет' }, s, c).error, 'Нет такого товара');
+  assert.equal(resolveIntent({ t: 'quest_taken', q: '1.7' }, s, c).error, 'Квест не доступен');
+  assert.deepEqual(resolveIntent({ t: 'quest_submitted', q: '1.8', note: 'x', at: '2000-01-01' } as never, s, c).error, 'Сначала отметь все задачи');
+});
+
+test('стартовые события из content/seed.json: состояние на 22 октября', () => {
+  const s = derive(loadJson('content/seed.json'), c);
+  assert.deepEqual([s.hero.xp, s.hero.level, s.gold, s.prog, s.qs['1.6'].tasks['1.6-a']], [140, 2, 15, ['1.6'], true]);
 });
 
 const get = (s: ReturnType<typeof derive>, key: string): unknown => {

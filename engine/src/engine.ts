@@ -211,6 +211,38 @@ export function canApply(e: GameEvent, s: State, c: Content): string | null {
 }
 export const swapValue = (item: PoolItem, rules: Rules): number => Math.round(item.price * (rules.swap_share ?? 1) / rules.rate_kzt_per_gold.value);
 
+// Намерение с сайта. Клиент не присылает выпавшую вещь и суммы: их дописывает resolveIntent (на бэкенде — сервер).
+export type Intent =
+  | Exclude<GameEvent, { t: 'chest_opened' | 'chest_swapped' | 'shop_bought' }>
+  | { t: 'chest_opened'; chain: string }
+  | { t: 'chest_swapped'; chain: string }
+  | { t: 'shop_bought'; item: string };
+
+// Превращает намерение в событие и проверяет его через canApply. Вещь из сундука — случайно и равновероятно среди пула тира.
+export function resolveIntent(i: Intent, s: State, c: Content, rnd: () => number = Math.random): { event: GameEvent; error: null } | { event: null; error: string } {
+  const fail = (error: string) => ({ event: null, error });
+  let e: GameEvent;
+  if (i.t === 'chest_opened') {
+    const ch = c.zone.chains.find(x => x.id === i.chain);
+    const opts = ch ? s.pool.filter(p => p.tier === ch.chest) : [];
+    if (s.chains[i.chain]?.chest !== 'ready' || !opts.length) return fail('Сундук не готов');
+    e = { t: 'chest_opened', chain: i.chain, item: opts[Math.min(opts.length - 1, Math.floor(rnd() * opts.length))].id };
+  } else if (i.t === 'chest_swapped') {
+    const rec = s.chains[i.chain]?.rec, item = rec ? c.pool.find(p => p.id === rec.item) : undefined;
+    if (!item || s.chains[i.chain].chest !== 'opened') return fail('Сундук не открыт');
+    e = { t: 'chest_swapped', chain: i.chain, gold: swapValue(item, c.rules) };
+  } else if (i.t === 'shop_bought') {
+    const it = c.shop.find(x => x.id === i.item);
+    if (!it) return fail('Нет такого товара');
+    e = { t: 'shop_bought', item: it.id, gold: it.gold };
+  } else {
+    const { at: _at, ...rest } = i;
+    e = rest as GameEvent;
+  }
+  const err = canApply(e, s, c);
+  return err ? fail(err) : { event: e, error: null };
+}
+
 // ---------- симуляция прохождения (для отчёта и проверки допусков)
 
 export interface SimStep { id: string; xp: number; level: number; gold: number; blocked: boolean }
