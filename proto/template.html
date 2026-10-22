@@ -532,7 +532,7 @@ function renderSheet() {
   if (ch) extra.push(`цепочка «${esc(ch.title)}» → ${esc(tierOf(ch).title.toLowerCase())} сундук`);
   if (q.deadline) extra.push(deadlineText(q));
   if (v.trial && (D.hero.level >= RULES.level.trial_from_level)) extra.push('засчитывается как испытание');
-  const calc = `<details><summary>Как посчитана награда</summary><ul>${q.tasks.filter(t => !t.optional).map(t => `<li>${esc(KIND[t.kind].label.toLowerCase())}, ${String(t.hours).replace('.', ',')} ч → +${Math.round(KIND[t.kind].xp_per_hour * t.hours)} XP, +${Math.round(KIND[t.kind].gold_per_hour * t.hours * 10) / 10} зол.</li>`).join('')}</ul></details>`;
+  const calc = `<details><summary>Как посчитана награда</summary><ul>${v.parts.map(p => `<li>${esc(KIND[p.kind].label.toLowerCase())} → +${Math.round(p.xp)} XP, +${Math.round(p.gold * 10) / 10} зол.</li>`).join('')}</ul></details>`;
   let acts = '';
   if (st === 'open') acts = `<button class="btn rust" type="button" data-take="${q.id}" ${full ? 'disabled' : ''}>Снять заказ</button><span class="note-t">${full ? 'Оба слота заняты.' : 'Займёт слот в журнале.'}</span>`;
   if (st === 'prog') acts = `<button class="btn pghost" type="button" disabled>Сдать · отметь все задачи</button><button class="btn ghost small" type="button" data-drop="${q.id}">Отложить</button>`;
