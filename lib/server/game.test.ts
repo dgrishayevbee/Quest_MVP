@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadContent, loadJson } from '../../engine/node/load.ts';
-import { swapValue, type GameEvent } from '../../engine/src/engine.ts';
-import { applyIntent, loadState, type EventStore } from './game.ts';
+import { derive, swapValue, type GameEvent } from '../../engine/src/engine.ts';
+import { applyIntent, exportLog, loadState, type EventStore } from './game.ts';
 import { fromRow, toRow, type EventRow } from './rows.ts';
 
 const c = loadContent(), seed: GameEvent[] = loadJson('content/seed.json');
@@ -62,4 +62,16 @@ test('вся глава через API: 1050 XP, ур. 5, 155 золота; ве
   last = await post({ t: 'chest_swapped', chain: 'voice', gold: 1_000_000 });
   assert.equal(last.state.swapGold, swapValue(c.pool.find(p => p.id === item)!, c.rules));
   assert.deepEqual(s.rows.at(-1)!.payload, { chain: 'voice', gold: last.state.swapGold });
+});
+
+test('выгрузка /api/export читается тем же derive и даёт то же состояние', async () => {
+  const s = memory();
+  await loadState(s, c, seed);
+  for (const body of [{ t: 'task_set', q: '1.6', task: '1.6-b', v: true }, { t: 'quest_taken', q: 'П.1' }, { t: 'task_set', q: 'П.1', task: 'П.1-a', v: true }])
+    assert.equal((await applyIntent(s, c, seed, body)).status, 200);
+  const events = await s.list();
+  const log = JSON.parse(JSON.stringify(exportLog(c, events, 'заметка')));
+  assert.deepEqual(Object.keys(log), ['version', 'exported', 'events', 'notes']);
+  assert.equal(log.notes, 'заметка');
+  assert.deepEqual(derive(log.events, c), derive(events, c));
 });
