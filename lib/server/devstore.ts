@@ -1,9 +1,9 @@
-// Только для `npm run dev` без ключей Supabase: события и заметки живут в памяти процесса.
-// В сборке (NODE_ENV=production) этот режим выключен — без ключей API отвечает 401.
+// Для `npm run dev` и превью-выкаток Vercel без ключей Supabase: события и заметки живут в памяти процесса,
+// входа нет. Память сбрасывается при перезапуске функции. На проде (VERCEL_ENV=production) режим выключен.
 import type { GameEvent } from '@/engine/src/engine';
 import type { EventStore } from './game';
 
-export const DEV_MEMORY = process.env.NODE_ENV === 'development' && !process.env.NEXT_PUBLIC_SUPABASE_URL;
+export const DEV_MEMORY = (process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'preview') && !process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 const g = globalThis as unknown as { __quest?: { events: GameEvent[]; notes: string; n: number } };
 const mem = () => (g.__quest ??= { events: [], notes: '', n: 0 });
