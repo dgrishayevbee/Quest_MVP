@@ -1,6 +1,7 @@
 'use client';
 // Карта зоны: метки квестов по quest.map, путь цепочки к сундуку, страж у перевала, туман следующей главы.
-// Подписаны только квесты, которые можно взять или сдать; закрытые и пройденные — по наведению.
+// Подписаны квесты, которые можно взять или сдать; у закрытых и пройденных — номер, имя по наведению.
+// Непройденные дороги спрятаны: при наведении на метку проступают её дороги и подпись «откроет / нужно».
 import { useEffect, useRef, useState } from 'react';
 import { doneCount, type Point, type Quest } from '@/engine/src/engine';
 import { CHAIN_OF, QBY, QUESTS, RULES, ZONE, ZONE2 } from '@/lib/content';
@@ -86,21 +87,32 @@ function Fog({ W, H, open }: { W: number; H: number; open: Point[] }) {
   );
 }
 
-function Marker({ q }: { q: Quest }) {
+const OPENS: Record<string, string[]> = {};
+for (const q of QUESTS) for (const d of q.deps) (OPENS[d] ??= []).push(q.id);
+
+function Marker({ q, onHover }: { q: Quest; onHover: (id: string | null) => void }) {
   const { D, open } = useGame();
   const p = q.map!, st = D.status[q.id], s = D.qs[q.id];
   const halo = st === 'open' || st === 'prog' || st === 'ready';
   const n = doneCount(s);
   const ly = st === 'done' || st === 'locked' ? 20 : 28;
   const quiet = st === 'done' || st === 'locked';
+  const miss = D.reasons[q.id]?.missing ?? [], lvl = D.reasons[q.id]?.needLevel;
+  const opens = (OPENS[q.id] ?? []).filter(id => D.status[id] === 'locked');
+  const more = st === 'locked'
+    ? [miss.length ? 'нужно: ' + miss.join(', ') : '', lvl ? 'ур. ' + lvl : ''].filter(Boolean).join(' · ')
+    : st !== 'done' && opens.length ? 'откроет: ' + opens.join(', ') : '';
   return (
     <>
-      <button type="button" className={`mk ${st}${halo ? ' halo' : ''}`} title={quiet ? q.title : undefined} style={{ left: p.x, top: p.y }} aria-label={q.title} onClick={() => open({ q: q.id })}>
+      <button type="button" className={`mk ${st}${halo ? ' halo' : ''}`} style={{ left: p.x, top: p.y }} aria-label={q.title} onClick={() => open({ q: q.id })}
+        onMouseEnter={() => onHover(q.id)} onMouseLeave={() => onHover(null)} onFocus={() => onHover(q.id)} onBlur={() => onHover(null)}>
         <span className="shield">{st === 'done' ? done(0) : st === 'open' ? '!' : '?'}</span>
       </button>
+      {quiet && <span className="mcode" style={{ left: p.x, top: p.y + 18 }}>{q.id}</span>}
       <span className={'mlabel' + (quiet ? ' hov' : '')} style={{ left: p.x, top: p.y + ly }}>
         {q.title}
         {(st === 'prog' || st === 'ready') && <small>{st === 'ready' ? 'можно сдать' : 'цель · ' + n + '/' + q.tasks.length}</small>}
+        {more && <small className="more">{more}</small>}
       </span>
     </>
   );
@@ -110,18 +122,21 @@ export function MapView() {
   const { D, open } = useGame();
   const M = ZONE.map!, W = M.size.w, H = M.size.h;
   const [box, k] = useFit(W);
+  const [hover, setHover] = useState<string | null>(null);
   const ch = ZONE.chains[0], cs = D.chains[ch.id], CP = M.chest[ch.id], B = M.boss;
   const pos = (id: string) => QBY[id]?.map;
-  // Дороги по зависимостям: пройденная — сплошная, к закрытому — карандашный пунктир; цепочка к сундуку — красная.
+  // Дороги по зависимостям: пройденная — сплошная; непройденная видна только у метки под курсором; цепочка к сундуку — красная.
   const roads: React.ReactNode[] = [], route: React.ReactNode[] = [];
   for (const q of QUESTS) for (const d of q.deps) {
     const a = pos(d), b = q.map;
     if (!a || !b) continue;
     const key = d + '>' + q.id, ok = D.qs[d].done;
-    roads.push(ok
-      ? <g key={key}><path d={curve(a, b)} fill="none" stroke="#F1E2C0" strokeWidth={6} strokeLinecap="round" opacity=".6" /><path d={curve(a, b)} fill="none" stroke="#6E5232" strokeWidth={2.4} strokeLinecap="round" /></g>
-      : <path key={key} d={curve(a, b)} fill="none" stroke="#8C7A5C" strokeWidth={1.6} strokeDasharray="2 6" strokeLinecap="round" />);
+    const lit = hover === d || hover === q.id;
     if (CHAIN_OF[q.id] && CHAIN_OF[q.id] === CHAIN_OF[d]) route.push(<path key={'r' + key} d={curve(a, b)} fill="none" stroke="var(--route)" strokeWidth={3.2} strokeLinecap="round" />);
+    if (!ok && !lit) continue;
+    roads.push(ok && !lit
+      ? <g key={key}><path d={curve(a, b)} fill="none" stroke="#F1E2C0" strokeWidth={6} strokeLinecap="round" opacity=".6" /><path d={curve(a, b)} fill="none" stroke="#6E5232" strokeWidth={2.4} strokeLinecap="round" /></g>
+      : <path key={key} d={curve(a, b)} fill="none" stroke="#7A5A2E" strokeWidth={2.4} strokeDasharray="3 6" strokeLinecap="round" />);
   }
   const keyRoad = pos(ZONE.boss.keys[1]) ?? pos(ZONE.boss.keys[0]);
   const revealed = QUESTS.filter(q => D.status[q.id] !== 'locked' && q.map).map(q => q.map!);
@@ -136,7 +151,7 @@ export function MapView() {
     <section className="view" role="tabpanel" id="view-map">
       <Banners />
       <div className="main">
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '6px 16px', marginBottom: 12 }}><h2 style={{ fontSize: 26 }}>Зона I · {ZONE.title}</h2><span className="legend"><span><i className="lg open" />можно взять</span><span><i className="lg prog" />цель, в работе</span><span><i className="lg locked" />под печатью</span><span><i className="lg done" />пройдено</span><span><i className="lg road" />дорога</span><span><i className="lg route" />путь к сундуку</span></span></div>
+        <h2 style={{ fontSize: 26, marginBottom: 12 }}>Зона I · {ZONE.title}</h2>
         <div className="map-box" ref={box} style={{ height: H * k }}><div className="map map-fit" style={{ width: W, height: H, transform: k < 1 ? `scale(${k})` : undefined }}>
           <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
             <Terrain />
@@ -148,7 +163,8 @@ export function MapView() {
             {(M.regions ?? []).map(r => <text key={r.name} x={r.x} y={r.y} textAnchor="middle" className="region">{r.name.toUpperCase()}</text>)}
           </svg>
           <div className="fogzone"><b>{ZONE2.title}</b><span>глава 2 · с ур. {ZONE2.min_level}{D.hero.level >= ZONE2.min_level ? ' ✓' : ''}</span><span className="arrow">→</span></div>
-          {QUESTS.map(q => <Marker key={q.id} q={q} />)}
+          <div className="legend cartouche"><span><i className="lg open" />можно взять</span><span><i className="lg prog" />цель, в работе</span><span><i className="lg locked" />под печатью</span><span><i className="lg done" />пройдено</span><span><i className="lg route" />путь к сундуку</span><em>Наведи на метку — проступят её дороги</em></div>
+          {QUESTS.map(q => <Marker key={q.id} q={q} onHover={setHover} />)}
           <button type="button" className={'chestmk' + (cs.chest === 'ready' ? ' ready' : '')} style={{ left: CP.x, top: CP.y }} aria-label={`Сундук цепочки ${ch.title}`} onClick={() => open({ chest: ch.id })}><span className="box" style={{ display: 'block' }} /></button>
           <span className="mlabel" style={{ left: CP.x, top: CP.y + 26 }}>{tierOf(ch).title} сундук{cs.chest !== 'locked' && <small>{chestLbl}</small>}</span>
           <button type="button" className={'bossmk' + (D.bossOpen ? ' open' : '')} style={{ left: B.x, top: B.y }} aria-label="Страж перевала" onClick={() => open({ boss: '1' })}>
