@@ -293,41 +293,6 @@ export function simulate(c: Content, order?: string[]): { steps: SimStep[]; stuc
   return { steps, stuck, final: s };
 }
 
-// ---------- подсказки для доски: путь главы и следующий ход
-
-// Порядок прохождения главы — тот же, что в отчёте `npm run check`. Считается из контента, не из событий.
-export const chapterPath = (c: Content): string[] => simulate(c).steps.map(s => s.id);
-
-export type NextStep =
-  | { kind: 'chest'; chain: string }
-  | { kind: 'submit'; q: string }
-  | { kind: 'task'; q: string; task: string }
-  | { kind: 'take'; q: string }
-  | { kind: 'trial' }
-  | { kind: 'boss' }
-  | { kind: 'none' };
-
-// Самый полезный ход сейчас: сундук → сдать готовый квест → следующая задача → взять квест по пути главы → испытание → страж.
-export function nextStep(s: State, c: Content, path: string[] = chapterPath(c)): NextStep {
-  const chest = c.zone.chains.find(ch => s.chains[ch.id].chest === 'ready');
-  if (chest) return { kind: 'chest', chain: chest.id };
-  const ready = s.prog.find(id => s.status[id] === 'ready');
-  if (ready) return { kind: 'submit', q: ready };
-  for (const id of s.prog) {
-    const t = c.zone.quests.find(q => q.id === id)!.tasks.find(t => !t.optional && !s.qs[id].tasks[t.id]);
-    if (t) return { kind: 'task', q: id, task: t.id };
-  }
-  const take = recommended(s, c, path);
-  if (take && s.prog.length < c.rules.slots) return { kind: 'take', q: take };
-  if (s.hero.blocked) return { kind: 'trial' };
-  if (s.bossOpen) return { kind: 'boss' };
-  return { kind: 'none' };
-}
-
-// Заказ, который советуем взять: первый доступный по пути главы.
-export const recommended = (s: State, c: Content, path: string[] = chapterPath(c)): string | null =>
-  path.find(id => s.status[id] === 'open') ?? c.zone.quests.find(q => s.status[q.id] === 'open')?.id ?? null;
-
 // ---------- проверка контента
 
 export interface Issue { level: 'error' | 'warn'; where: string; msg: string }

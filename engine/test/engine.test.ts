@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { questValue, xpForLevel, derive, validate, simulate, canApply, swapValue, upgradeEvents, resolveIntent, parseIntent, nextStep, chapterPath, recommended } from '../src/engine.ts';
+import { questValue, xpForLevel, derive, validate, simulate, canApply, swapValue, upgradeEvents, resolveIntent, parseIntent } from '../src/engine.ts';
 import type { GameEvent, Content } from '../src/engine.ts';
 import { loadContent, loadJson, ROOT } from '../node/load.ts';
 
@@ -171,24 +171,4 @@ test('испытание: с ур. 4 одна теория не поднимае
   assert.equal(s.hero.blocked, true);
   const s2 = derive(play(['1.1', '1.2', 'П.1', 'П.2', 'П.3', '1.3', 'Ф.1', '1.6']), t);
   assert.equal(s2.hero.level, 5, 'тренировка в 1.6 снимает блок');
-});
-
-test('путь главы совпадает с прохождением в отчёте', () => {
-  assert.deepEqual(chapterPath(c), ['1.1', '1.2', 'П.1', 'П.2', 'П.3', '1.3', '1.6', 'Ф.3', '1.7', '1.8', 'Ф.1', 'Ф.2']);
-});
-
-test('следующий ход: задача → сдать → взять по пути → сундук → страж', () => {
-  const seed: GameEvent[] = loadJson('content/seed.json');
-  let s = derive(seed, c);
-  assert.deepEqual(nextStep(s, c), { kind: 'task', q: '1.6', task: '1.6-b' }, 'первая неотмеченная задача квеста в работе');
-  const ev = [...seed, ...Q('1.6').tasks.map(t => ({ t: 'task_set', q: '1.6', task: t.id, v: true }) as GameEvent)];
-  assert.deepEqual(nextStep(derive(ev, c), c), { kind: 'submit', q: '1.6' });
-  ev.push({ t: 'quest_submitted', q: '1.6', note: 'тест' });
-  s = derive(ev, c);
-  assert.equal(recommended(s, c), 'П.1', 'первый доступный по пути главы');
-  assert.deepEqual(nextStep(s, c), { kind: 'take', q: 'П.1' });
-  const all = play(['П.1', 'П.2', 'П.3', '1.3', 'Ф.3', '1.7'], ev);
-  assert.deepEqual(nextStep(derive(all, c), c), { kind: 'chest', chain: 'voice' });
-  const fin = play(['1.8', 'Ф.1', 'Ф.2'], [...all, { t: 'chest_opened', chain: 'voice', item: 'w1' }]);
-  assert.deepEqual(nextStep(derive(fin, c), c), { kind: 'boss' });
 });
