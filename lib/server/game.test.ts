@@ -21,7 +21,7 @@ function memory(): EventStore & { rows: EventRow[] } {
 test('первый вход: записываются стартовые события', async () => {
   const s = memory();
   const { state } = await loadState(s, c, seed);
-  assert.deepEqual([state.hero.xp, state.hero.level, state.gold, state.prog], [140, 2, 15, ['1.6']]);
+  assert.deepEqual([state.hero.xp, state.hero.level, state.gold, state.prog], [140, 2, 15, []]);
   assert.equal(s.rows.length, seed.length);
   await loadState(s, c, seed);
   assert.equal(s.rows.length, seed.length, 'второй раз не дописываются');
@@ -30,36 +30,39 @@ test('первый вход: записываются стартовые соб�
 test('запросы в обход интерфейса получают 400 и ничего не пишут', async () => {
   const s = memory();
   await loadState(s, c, seed);
+  assert.equal((await applyIntent(s, c, seed, { t: 'quest_taken', q: '1.10' })).status, 200);
   const n = s.rows.length;
   const bad = [
-    [{ t: 'quest_submitted', q: '1.6', note: 'готово' }, 'Сначала отметь все задачи'],
+    [{ t: 'quest_submitted', q: '1.10', note: 'готово' }, 'Сначала отметь все задачи'],
     [{ t: 'shop_bought', item: 's1', gold: 0 }, 'Не хватает золота'],
-    [{ t: 'chest_opened', chain: 'voice', item: 'w1' }, 'Сундук не готов'],
-    [{ t: 'task_set', q: '1.6', task: 'П.1-a', v: true }, 'Нет такой задачи'],
-    [{ t: 'quest_taken', q: '1.7' }, 'Квест не доступен'],
+    [{ t: 'chest_opened', chain: 'offer', item: 'w1' }, 'Сундук не готов'],
+    [{ t: 'task_set', q: '1.10', task: '1.9-a', v: true }, 'Нет такой задачи'],
+    [{ t: 'task_set', q: '1.9', task: '1.9-a', v: true }, 'Задачи отмечаются только у квеста в работе'],
+    [{ t: 'quest_taken', q: '1.15' }, 'Квест не доступен'],
+    [{ t: 'quest_taken', q: '1.6' }, 'Квест не доступен'],
     [{ t: 'hack' }, 'Неизвестное действие «hack»'],
   ] as const;
   for (const [body, error] of bad) assert.deepEqual(await applyIntent(s, c, seed, body), { status: 400, body: { error } });
-  assert.equal((await applyIntent(s, c, seed, { t: 'quest_taken', q: 'П.1' })).status, 200);
-  assert.deepEqual(await applyIntent(s, c, seed, { t: 'quest_taken', q: 'П.2' }), { status: 400, body: { error: 'Оба слота заняты' } });
+  assert.equal((await applyIntent(s, c, seed, { t: 'quest_taken', q: 'П.3' })).status, 200);
+  assert.deepEqual(await applyIntent(s, c, seed, { t: 'quest_taken', q: '1.9' }), { status: 400, body: { error: 'Оба слота заняты' } });
   assert.equal(s.rows.length, n + 1);
 });
 
-test('вся глава через API: 1050 XP, ур. 5, 155 золота; вещь и суммы считает сервер', async () => {
+test('вся глава через API: 1120 XP, ур. 5, 185 золота; вещь и суммы считает сервер', async () => {
   const s = memory();
   const post = async (body: object) => { const r = await applyIntent(s, c, seed, body, () => 0.5); assert.equal(r.status, 200, JSON.stringify(r.body)); return r.body as Exclude<typeof r.body, { error: string }>; };
   let last = (await loadState(s, c, seed));
-  for (const id of ['1.6', 'П.1', 'П.2', 'П.3', '1.3', 'Ф.3', '1.7', '1.8', 'Ф.1', 'Ф.2']) {
+  for (const id of ['1.9', 'Ф.2', '1.10', '1.11', 'П.3', '1.3', '1.12', '1.13', '1.4', '1.14', '1.15', '1.8', 'Ф.1']) {
     const q = c.zone.quests.find(x => x.id === id)!;
     if (last.state.status[id] === 'open') last = await post({ t: 'quest_taken', q: id });
     for (const t of q.tasks) if (!last.state.qs[id].tasks[t.id]) last = await post({ t: 'task_set', q: id, task: t.id, v: true });
     last = await post({ t: 'quest_submitted', q: id, note: 'сделано' });
   }
-  assert.deepEqual([last.state.hero.xp, last.state.hero.level, last.state.gold, last.state.bossOpen], [1050, 5, 155, true]);
-  last = await post({ t: 'chest_opened', chain: 'voice', item: 'выбираю сам' });
-  const item = last.state.chains.voice.rec!.item;
+  assert.deepEqual([last.state.hero.xp, last.state.hero.level, last.state.gold, last.state.bossOpen], [1120, 5, 185, true]);
+  last = await post({ t: 'chest_opened', chain: 'offer', item: 'выбираю сам' });
+  const item = last.state.chains.offer.rec!.item;
   assert.ok(c.pool.some(p => p.id === item && p.tier === 'big'));
-  last = await post({ t: 'chest_swapped', chain: 'voice', gold: 1_000_000 });
+  last = await post({ t: 'chest_swapped', chain: 'offer', gold: 1_000_000 });
   assert.equal(last.state.swapGold, swapValue(c.pool.find(p => p.id === item)!, c.rules));
-  assert.deepEqual(s.rows.at(-1)!.payload, { chain: 'voice', gold: last.state.swapGold });
+  assert.deepEqual(s.rows.at(-1)!.payload, { chain: 'offer', gold: last.state.swapGold });
 });
