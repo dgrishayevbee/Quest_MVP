@@ -1,7 +1,8 @@
 'use client';
 // Карта зоны: метки квестов по quest.map, путь цепочки к сундуку, страж у перевала, туман следующей главы.
-// Подписаны квесты, которые можно взять или сдать; у закрытых и пройденных — номер, имя по наведению.
-// Непройденные дороги спрятаны: при наведении на метку проступают её дороги и подпись «откроет / нужно».
+// Подписаны все квесты, кроме пройденных: у них номер, имя по наведению.
+// Дороги видны всегда, со стрелкой к следующему квесту: от доступного — заметная, между закрытыми — бледная.
+// При наведении на метку её дороги подсвечиваются и появляется подпись «откроет / нужно».
 import { useEffect, useRef, useState } from 'react';
 import { doneCount, type Point, type Quest } from '@/engine/src/engine';
 import { CHAIN_OF, QBY, QUESTS, RULES, ZONE, ZONE2 } from '@/lib/content';
@@ -12,6 +13,14 @@ import { useGame } from './GameProvider';
 const curve = (a: Point, b: Point, bend = 0.15) => {
   const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, dx = b.x - a.x, dy = b.y - a.y;
   return `M${a.x} ${a.y} Q${mx - dy * bend} ${my + dx * bend} ${b.x} ${b.y}`;
+};
+// Стрелка на середине дороги: показывает, куда ведёт дорога.
+const arrow = (a: Point, b: Point, color: string, bend = 0.15) => {
+  const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, dx = b.x - a.x, dy = b.y - a.y;
+  const c = { x: mx - dy * bend, y: my + dx * bend }, t = 0.55, u = 1 - t;
+  const x = u * u * a.x + 2 * u * t * c.x + t * t * b.x, y = u * u * a.y + 2 * u * t * c.y + t * t * b.y;
+  const ang = Math.atan2(2 * u * (c.y - a.y) + 2 * t * (b.y - c.y), 2 * u * (c.x - a.x) + 2 * t * (b.x - c.x)) * 180 / Math.PI;
+  return <path d="M-5 -5 L4 0 L-5 5" transform={`translate(${x} ${y}) rotate(${ang})`} fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />;
 };
 const done = (n: number) => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F4DDC8" strokeWidth={3.2} aria-hidden="true" key={n}><path d="M5 12l5 5 9-10" /></svg>;
 
@@ -96,7 +105,7 @@ function Marker({ q, onHover }: { q: Quest; onHover: (id: string | null) => void
   const halo = st === 'open' || st === 'prog' || st === 'ready';
   const n = doneCount(s);
   const ly = st === 'done' || st === 'locked' ? 20 : 28;
-  const quiet = st === 'done' || st === 'locked';
+  const quiet = st === 'done';
   const miss = D.reasons[q.id]?.missing ?? [], lvl = D.reasons[q.id]?.needLevel;
   const opens = (OPENS[q.id] ?? []).filter(id => D.status[id] === 'locked');
   const more = st === 'locked'
@@ -109,7 +118,7 @@ function Marker({ q, onHover }: { q: Quest; onHover: (id: string | null) => void
         <span className="shield">{st === 'done' ? done(0) : st === 'open' ? '!' : '?'}</span>
       </button>
       {quiet && <span className="mcode" style={{ left: p.x, top: p.y + 18 }}>{q.id}</span>}
-      <span className={'mlabel' + (quiet ? ' hov' : '')} style={{ left: p.x, top: p.y + ly }}>
+      <span className={'mlabel' + (quiet ? ' hov' : st === 'locked' ? ' lk' : '')} style={{ left: p.x, top: p.y + ly }}>
         {q.title}
         {(st === 'prog' || st === 'ready') && <small>{st === 'ready' ? 'можно сдать' : 'цель · ' + n + '/' + q.tasks.length}</small>}
         {more && <small className="more">{more}</small>}
@@ -133,10 +142,11 @@ export function MapView() {
     const key = d + '>' + q.id, ok = D.qs[d].done;
     const lit = hover === d || hover === q.id;
     if (CHAIN_OF[q.id] && CHAIN_OF[q.id] === CHAIN_OF[d]) route.push(<path key={'r' + key} d={curve(a, b)} fill="none" stroke="var(--route)" strokeWidth={3.2} strokeLinecap="round" />);
-    if (!ok && !lit) continue;
+    const from = D.status[d], next = from === 'open' || from === 'prog' || from === 'ready';
+    const col = lit ? '#B4523E' : ok ? '#6E5232' : next ? '#7A5A2E' : '#8E7450';
     roads.push(ok && !lit
-      ? <g key={key}><path d={curve(a, b)} fill="none" stroke="#F1E2C0" strokeWidth={6} strokeLinecap="round" opacity=".6" /><path d={curve(a, b)} fill="none" stroke="#6E5232" strokeWidth={2.4} strokeLinecap="round" /></g>
-      : <path key={key} d={curve(a, b)} fill="none" stroke="#7A5A2E" strokeWidth={2.4} strokeDasharray="3 6" strokeLinecap="round" />);
+      ? <g key={key}><path d={curve(a, b)} fill="none" stroke="#F1E2C0" strokeWidth={6} strokeLinecap="round" opacity=".6" /><path d={curve(a, b)} fill="none" stroke={col} strokeWidth={2.4} strokeLinecap="round" />{arrow(a, b, col)}</g>
+      : <g key={key} opacity={lit || next ? 1 : 0.9}><path d={curve(a, b)} fill="none" stroke={col} strokeWidth={lit ? 3 : next ? 2.4 : 1.8} strokeDasharray={next || lit ? '6 6' : '3 6'} strokeLinecap="round" />{arrow(a, b, col)}</g>);
   }
   const keyRoad = pos(ZONE.boss.keys[1]) ?? pos(ZONE.boss.keys[0]);
   const revealed = QUESTS.filter(q => D.status[q.id] !== 'locked' && q.map).map(q => q.map!);
@@ -155,15 +165,15 @@ export function MapView() {
         <div className="map-box" ref={box} style={{ height: H * k }}><div className="map map-fit" style={{ width: W, height: H, transform: k < 1 ? `scale(${k})` : undefined }}>
           <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
             <Terrain />
+            <Fog W={W} H={H} open={revealed} />
             {roads}
             {keyRoad && <path d={curve(keyRoad, B, -0.1)} fill="none" stroke="#5A4128" strokeWidth={2} strokeDasharray="7 5" strokeLinecap="round" />}
             {route}
             <path d={curve(pos(ch.quests.at(-1)!)!, CP)} fill="none" stroke="var(--route)" strokeWidth={2.6} strokeDasharray="7 6" strokeLinecap="round" />
-            <Fog W={W} H={H} open={revealed} />
             {(M.regions ?? []).map(r => <text key={r.name} x={r.x} y={r.y} textAnchor="middle" className="region">{r.name.toUpperCase()}</text>)}
           </svg>
           <div className="fogzone"><b>{ZONE2.title}</b><span>глава 2 · с ур. {ZONE2.min_level}{D.hero.level >= ZONE2.min_level ? ' ✓' : ''}</span><span className="arrow">→</span></div>
-          <div className="legend cartouche"><span><i className="lg open" />можно взять</span><span><i className="lg prog" />цель, в работе</span><span><i className="lg locked" />под печатью</span><span><i className="lg done" />пройдено</span><span><i className="lg route" />путь к сундуку</span><em>Наведи на метку — проступят её дороги</em></div>
+          <div className="legend cartouche"><span><i className="lg open" />можно взять</span><span><i className="lg prog" />цель, в работе</span><span><i className="lg locked" />под печатью</span><span><i className="lg done" />пройдено</span><span><i className="lg route" />путь к сундуку</span><em>Стрелка — куда ведёт дорога. Наведи на метку — подсветятся её дороги</em></div>
           {QUESTS.map(q => <Marker key={q.id} q={q} onHover={setHover} />)}
           <button type="button" className={'chestmk' + (cs.chest === 'ready' ? ' ready' : '')} style={{ left: CP.x, top: CP.y }} aria-label={`Сундук цепочки ${ch.title}`} onClick={() => open({ chest: ch.id })}><span className="box" style={{ display: 'block' }} /></button>
           <span className="mlabel" style={{ left: CP.x, top: CP.y + 26 }}>{tierOf(ch).title} сундук{cs.chest !== 'locked' && <small>{chestLbl}</small>}</span>
