@@ -45,6 +45,7 @@ main{max-width:1440px;margin:0 auto;padding-top:20px}
 .banner.alarm{border-color:var(--boss);background:color-mix(in srgb,var(--boss) 14%,var(--panel))}
 .banner p{margin:0;font-size:14px}
 .btn{font-weight:700;font-size:14px;padding:10px 16px;border-radius:6px;border:1px solid var(--gold-hi);background:var(--gold);color:var(--gold-ink);cursor:pointer;min-height:42px}
+a.btn{display:inline-flex;align-items:center;text-decoration:none;box-sizing:border-box}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .btn.rust{background:var(--rust);border-color:var(--rust-dark);color:#FFF1DA;box-shadow:inset 0 1px 0 #9E5A32}
 .btn.moss{background:#4F6B38;border-color:#8DB074;color:#F1F6EA}

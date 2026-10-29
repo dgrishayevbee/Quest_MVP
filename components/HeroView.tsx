@@ -95,6 +95,7 @@ function Notes() {
       <div className="tools">
         <button className="btn" type="button" onClick={() => copy(statusText(D, notes), 'Статус скопирован. Вставь его в чат с Claude')}>Скопировать статус для Claude</button>
         <button className="btn ghost" type="button" onClick={() => copy(JSON.stringify({ version: RULES.version, exported: new Date().toISOString(), events, notes }), 'Журнал событий скопирован')}>Скопировать журнал событий (JSON)</button>
+        <a className="btn ghost" href="/api/export" download="put-provodnika.json">Скачать JSON</a>
       </div>
       <textarea ref={fb} hidden={fallback === null} readOnly aria-label="Статус для копирования" value={fallback ?? ''} />
     </section>
