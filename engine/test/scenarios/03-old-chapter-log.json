@@ -1,0 +1,11 @@
+{
+  "name": "Журнал 22 октября после переделки главы: события по снятому 1.6 не занимают слот",
+  "events": [
+    {"t": "quest_submitted", "q": "1.1", "note": "Сдан до игры"},
+    {"t": "quest_submitted", "q": "1.2", "note": "Сдан до игры"},
+    {"t": "quest_taken", "q": "1.6"},
+    {"t": "task_set", "q": "1.6", "task": "1.6-a", "v": true},
+    {"t": "task_set", "q": "1.6", "task": "1.6-b", "v": true}
+  ],
+  "expect": {"xp": 140, "level": 2, "gold": 15, "slots": 0, "status.1.10": "open"}
+}

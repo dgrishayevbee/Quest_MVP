@@ -126,7 +126,11 @@ export function derive(events: GameEvent[], c: Content): State {
   const shop: State['shop'] = [];
   const archive: State['archive'] = [];
   let swapGold = 0;
+  const chainIds = new Set(zone.chains.map(ch => ch.id));
   for (const e of events) {
+    // Журнал только дописывается, а контент меняется: события по квесту или цепочке, которых больше нет в главе, пропускаем.
+    if ('q' in e && !qs[e.q]) continue;
+    if ('chain' in e && (!chainIds.has(e.chain) || (e.t !== 'chest_opened' && !chests[e.chain]))) continue;
     if (e.t === 'quest_taken') qs[e.q].taken = true;
     else if (e.t === 'quest_dropped') qs[e.q].taken = false;
     else if (e.t === 'task_set') { if (e.task in qs[e.q].tasks) qs[e.q].tasks[e.task] = !!e.v; }

@@ -1,6 +1,6 @@
 {
   "name": "Вернуть в работу: XP и золото квеста снимаются",
-  "play": ["1.1", "1.2", "П.1"],
-  "events": [{"t": "quest_reopened", "q": "П.1"}],
-  "expect": {"xp": 140, "level": 2, "status.П.1": "ready", "gold": 15}
+  "play": ["1.1", "1.2", "П.3"],
+  "events": [{"t": "quest_reopened", "q": "П.3"}],
+  "expect": {"xp": 140, "level": 2, "status.П.3": "ready", "gold": 15}
 }
